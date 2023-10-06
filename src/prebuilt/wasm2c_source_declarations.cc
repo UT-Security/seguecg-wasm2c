@@ -108,15 +108,37 @@ R"w2c_template(#define MEMCHECK(mem, a, t)
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE
 )w2c_template"
-R"w2c_template(// Access to the first 64k Wasm page should map to an access of the first 4k shadow page
+R"w2c_template(
+// Access to the first 64k Wasm page should map to an access of the first 4k shadow page
 )w2c_template"
 R"w2c_template(// Access to the second 64k Wasm page should map to an access of the second 4k shadow page
 )w2c_template"
 R"w2c_template(// ... and so on ...
 )w2c_template"
+R"w2c_template(#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==1
+)w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[a >> 4])
 )w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==2
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[(a >> 16) << 4])
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==3
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) mem->shadow_memory[a >> 4] = 0
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==4
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) mem->shadow_memory[(a >> 16) << 4] = 0
+)w2c_template"
 R"w2c_template(#else
+)w2c_template"
+R"w2c_template(#error "WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME not defined"
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
+#else
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) RANGE_CHECK(mem, a, sizeof(t))
 )w2c_template"

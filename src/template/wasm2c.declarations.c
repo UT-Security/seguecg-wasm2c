@@ -58,10 +58,22 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #if WASM_RT_MEMCHECK_GUARD_PAGES
 #define MEMCHECK(mem, a, t)
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE
+
 // Access to the first 64k Wasm page should map to an access of the first 4k shadow page
 // Access to the second 64k Wasm page should map to an access of the second 4k shadow page
 // ... and so on ...
+#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==1
 #define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[a >> 4])
+#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==2
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[(a >> 16) << 4])
+#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==3
+#define MEMCHECK(mem, a, t) mem->shadow_memory[a >> 4] = 0
+#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==4
+#define MEMCHECK(mem, a, t) mem->shadow_memory[(a >> 16) << 4] = 0
+#else
+#error "WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME not defined"
+#endif
+
 #else
 #define MEMCHECK(mem, a, t) RANGE_CHECK(mem, a, sizeof(t))
 #endif

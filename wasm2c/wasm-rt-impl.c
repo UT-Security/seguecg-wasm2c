@@ -323,7 +323,11 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   }
 
   uint64_t shadow_byte_length = initial_pages * OSPAGE_SIZE;
+#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==3 || WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==4
+  int shadow_ret = os_mprotect(shadow_memory, shadow_byte_length);
+#else
   int shadow_ret = os_mprotect_read(shadow_memory, shadow_byte_length);
+#endif
   if (shadow_ret != 0) {
     os_print_last_error("os_mprotect shadow failed.");
     abort();
@@ -365,7 +369,11 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
   uint64_t shadow_old_size = old_pages * OSPAGE_SIZE;
   uint64_t shadow_new_size = new_pages * OSPAGE_SIZE;
   uint64_t shadow_delta_size = delta * OSPAGE_SIZE;
+#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==3 || WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==4
+  int shadow_ret = os_mprotect(memory->shadow_memory + shadow_old_size, shadow_delta_size);
+#else
   int shadow_ret = os_mprotect_read(memory->shadow_memory + shadow_old_size, shadow_delta_size);
+#endif
   if (shadow_ret != 0) {
     return (uint64_t)-1;
   }
