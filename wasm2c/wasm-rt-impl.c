@@ -36,7 +36,7 @@
 #include <sys/mman.h>
 #endif
 
-#if WASM_RT_USE_SEGUE
+#if WASM_RT_USE_SEGUE || WASM_RT_USE_SHADOW_SEGUE
 #include <immintrin.h>
 #endif
 
@@ -343,6 +343,11 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   }
 
   memory->shadow_memory = shadow_memory;
+
+#if WASM_RT_USE_SHADOW_SEGUE
+  _writegsbase_u64((uintptr_t)shadow_memory);
+#endif
+
 #endif
 
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
@@ -363,6 +368,10 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   }
 
   memset(&(memory->shadow_bytes[initial_pages]), 0, shadow_zero_size);
+
+#if WASM_RT_USE_SHADOW_SEGUE
+  _writegsbase_u64((uintptr_t)memory->shadow_bytes);
+#endif
 
 #endif
 }
