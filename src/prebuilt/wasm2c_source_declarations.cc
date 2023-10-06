@@ -75,17 +75,6 @@ R"w2c_template(    TRAP(OOB);
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(
-#if WASM_RT_MEMCHECK_GUARD_PAGES
-)w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t)
-)w2c_template"
-R"w2c_template(#else
-)w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) RANGE_CHECK(mem, a, sizeof(t))
-)w2c_template"
-R"w2c_template(#endif
-)w2c_template"
-R"w2c_template(
 #ifdef __GNUC__
 )w2c_template"
 R"w2c_template(#define FORCE_READ_INT(var) __asm__("" ::"r"(var));
@@ -108,16 +97,46 @@ R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(#else
 )w2c_template"
-R"w2c_template(#define FORCE_READ_INT(var)
+R"w2c_template(#error "No force read supported"
 )w2c_template"
-R"w2c_template(#define FORCE_READ_FLOAT(var)
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
+#if WASM_RT_MEMCHECK_GUARD_PAGES
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t)
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE
+)w2c_template"
+R"w2c_template(// Access to the first 64k Wasm page should map to an access of the first 4k shadow page
+)w2c_template"
+R"w2c_template(// Access to the second 64k Wasm page should map to an access of the second 4k shadow page
+)w2c_template"
+R"w2c_template(// ... and so on ...
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[a >> 4])
+)w2c_template"
+R"w2c_template(#else
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) RANGE_CHECK(mem, a, sizeof(t))
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
+#ifdef WASM_RT_NOINLINE
+)w2c_template"
+R"w2c_template(#define MAYBEINLINE __attribute__ ((noinline))
+)w2c_template"
+R"w2c_template(#else
+)w2c_template"
+R"w2c_template(#define MAYBEINLINE inline
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(
 #if WABT_BIG_ENDIAN
 )w2c_template"
-R"w2c_template(static inline void load_data(void* dest, const void* src, size_t n) {
+R"w2c_template(static MAYBEINLINE void load_data(void* dest, const void* src, size_t n) {
 )w2c_template"
 R"w2c_template(  if (!n) {
 )w2c_template"
@@ -155,7 +174,7 @@ R"w2c_template(  } while (0)
 )w2c_template"
 R"w2c_template(#define DEFINE_LOAD(name, t1, t2, t3, force_read)                      \
 )w2c_template"
-R"w2c_template(  static inline t3 name(wasm_rt_memory_t* mem, u64 addr) {             \
+R"w2c_template(  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) {             \
 )w2c_template"
 R"w2c_template(    MEMCHECK(mem, addr, t1);                                           \
 )w2c_template"
@@ -174,7 +193,7 @@ R"w2c_template(  }
 R"w2c_template(
 #define DEFINE_STORE(name, t1, t2)                                      \
 )w2c_template"
-R"w2c_template(  static inline void name(wasm_rt_memory_t* mem, u64 addr, t2 value) {  \
+R"w2c_template(  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) {  \
 )w2c_template"
 R"w2c_template(    MEMCHECK(mem, addr, t1);                                            \
 )w2c_template"
@@ -188,7 +207,7 @@ R"w2c_template(  }
 )w2c_template"
 R"w2c_template(#else
 )w2c_template"
-R"w2c_template(static inline void load_data(void* dest, const void* src, size_t n) {
+R"w2c_template(static MAYBEINLINE void load_data(void* dest, const void* src, size_t n) {
 )w2c_template"
 R"w2c_template(  if (!n) {
 )w2c_template"
@@ -212,7 +231,7 @@ R"w2c_template(  } while (0)
 )w2c_template"
 R"w2c_template(#define DEFINE_LOAD(name, t1, t2, t3, force_read)          \
 )w2c_template"
-R"w2c_template(  static inline t3 name(wasm_rt_memory_t* mem, u64 addr) { \
+R"w2c_template(  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) { \
 )w2c_template"
 R"w2c_template(    MEMCHECK(mem, addr, t1);                               \
 )w2c_template"
@@ -229,7 +248,7 @@ R"w2c_template(  }
 R"w2c_template(
 #define DEFINE_STORE(name, t1, t2)                                     \
 )w2c_template"
-R"w2c_template(  static inline void name(wasm_rt_memory_t* mem, u64 addr, t2 value) { \
+R"w2c_template(  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) { \
 )w2c_template"
 R"w2c_template(    MEMCHECK(mem, addr, t1);                                           \
 )w2c_template"
@@ -297,7 +316,7 @@ R"w2c_template(
 R"w2c_template(// https://github.com/nemequ/portable-snippets/blob/master/builtin/builtin.h
 )w2c_template"
 R"w2c_template(
-static inline int I64_CLZ(unsigned long long v) {
+static MAYBEINLINE int I64_CLZ(unsigned long long v) {
 )w2c_template"
 R"w2c_template(  unsigned long r = 0;
 )w2c_template"
@@ -328,7 +347,7 @@ R"w2c_template(  return 64;
 R"w2c_template(}
 )w2c_template"
 R"w2c_template(
-static inline int I32_CLZ(unsigned long v) {
+static MAYBEINLINE int I32_CLZ(unsigned long v) {
 )w2c_template"
 R"w2c_template(  unsigned long r = 0;
 )w2c_template"
@@ -343,7 +362,7 @@ R"w2c_template(  return 32;
 R"w2c_template(}
 )w2c_template"
 R"w2c_template(
-static inline int I64_CTZ(unsigned long long v) {
+static MAYBEINLINE int I64_CTZ(unsigned long long v) {
 )w2c_template"
 R"w2c_template(  if (!v) {
 )w2c_template"
@@ -377,7 +396,7 @@ R"w2c_template(#endif
 R"w2c_template(}
 )w2c_template"
 R"w2c_template(
-static inline int I32_CTZ(unsigned long v) {
+static MAYBEINLINE int I32_CTZ(unsigned long v) {
 )w2c_template"
 R"w2c_template(  if (!v) {
 )w2c_template"
@@ -396,7 +415,7 @@ R"w2c_template(}
 R"w2c_template(
 #define POPCOUNT_DEFINE_PORTABLE(f_n, T)                            \
 )w2c_template"
-R"w2c_template(  static inline u32 f_n(T x) {                                      \
+R"w2c_template(  static MAYBEINLINE u32 f_n(T x) {                                      \
 )w2c_template"
 R"w2c_template(    x = x - ((x >> 1) & (T) ~(T)0 / 3);                             \
 )w2c_template"
@@ -637,7 +656,7 @@ R"w2c_template(  TRUNC_SAT_U(u64, f64, (f64)UINT64_MAX, UINT64_MAX, x)
 R"w2c_template(
 #define DEFINE_REINTERPRET(name, t1, t2)         \
 )w2c_template"
-R"w2c_template(  static inline t2 name(t1 x) {                  \
+R"w2c_template(  static MAYBEINLINE t2 name(t1 x) {                  \
 )w2c_template"
 R"w2c_template(    t2 result;                                   \
 )w2c_template"

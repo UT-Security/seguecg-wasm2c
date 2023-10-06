@@ -37,6 +37,7 @@
 #endif
 
 #define PAGE_SIZE 65536
+#define OSPAGE_SIZE 4096
 
 #if WASM_RT_INSTALL_SIGNAL_HANDLER
 static bool g_signal_handler_installed = false;
@@ -101,6 +102,18 @@ static int os_mprotect(void* addr, size_t size) {
   return -1;
 }
 
+static int os_mprotect_read(void* addr, size_t size) {
+  if (size == 0) {
+    return 0;
+  }
+  void* ret = VirtualAlloc(addr, size, MEM_COMMIT, PAGE_READ);
+  if (ret == addr) {
+    return 0;
+  }
+  VirtualFree(addr, 0, MEM_RELEASE);
+  return -1;
+}
+
 static void os_print_last_error(const char* msg) {
   DWORD errorMessageID = GetLastError();
   if (errorMessageID != 0) {
@@ -157,6 +170,10 @@ static int os_munmap(void* addr, size_t size) {
 
 static int os_mprotect(void* addr, size_t size) {
   return mprotect(addr, size, PROT_READ | PROT_WRITE);
+}
+
+static int os_mprotect_read(void* addr, size_t size) {
+  return mprotect(addr, size, PROT_READ);
 }
 
 static void os_print_last_error(const char* msg) {
@@ -296,6 +313,24 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
 #else
   memory->data = calloc(byte_length, 1);
 #endif
+
+#if WASM_RT_MEMCHECK_SHADOW_PAGE
+  const uint64_t shadow_memory_size = max_pages * OSPAGE_SIZE;
+  void* shadow_memory = os_mmap(shadow_memory_size);
+  if (!shadow_memory) {
+    os_print_last_error("os_mmap shadow failed.");
+    abort();
+  }
+
+  uint64_t shadow_byte_length = initial_pages * OSPAGE_SIZE;
+  int shadow_ret = os_mprotect_read(shadow_memory, shadow_byte_length);
+  if (shadow_ret != 0) {
+    os_print_last_error("os_mprotect shadow failed.");
+    abort();
+  }
+
+  memory->shadow_memory = shadow_memory;
+#endif
 }
 
 static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
@@ -325,6 +360,17 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
   memset(new_data + old_size, 0, delta_size);
 #endif
 #endif
+
+#if WASM_RT_MEMCHECK_SHADOW_PAGE
+  uint64_t shadow_old_size = old_pages * OSPAGE_SIZE;
+  uint64_t shadow_new_size = new_pages * OSPAGE_SIZE;
+  uint64_t shadow_delta_size = delta * OSPAGE_SIZE;
+  int shadow_ret = os_mprotect_read(memory->shadow_memory + shadow_old_size, shadow_delta_size);
+  if (shadow_ret != 0) {
+    return (uint64_t)-1;
+  }
+#endif
+
 #if WABT_BIG_ENDIAN
   memmove(new_data + new_size - old_size, new_data, old_size);
   memset(new_data, 0, delta_size);

@@ -41,12 +41,6 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
     TRAP(OOB);
 #endif
 
-#if WASM_RT_MEMCHECK_GUARD_PAGES
-#define MEMCHECK(mem, a, t)
-#else
-#define MEMCHECK(mem, a, t) RANGE_CHECK(mem, a, sizeof(t))
-#endif
-
 #ifdef __GNUC__
 #define FORCE_READ_INT(var) __asm__("" ::"r"(var));
 // Clang on Mips requires "f" constraints on floats
@@ -58,12 +52,28 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #define FORCE_READ_FLOAT(var) __asm__("" ::"r"(var));
 #endif
 #else
-#define FORCE_READ_INT(var)
-#define FORCE_READ_FLOAT(var)
+#error "No force read supported"
+#endif
+
+#if WASM_RT_MEMCHECK_GUARD_PAGES
+#define MEMCHECK(mem, a, t)
+#elif WASM_RT_MEMCHECK_SHADOW_PAGE
+// Access to the first 64k Wasm page should map to an access of the first 4k shadow page
+// Access to the second 64k Wasm page should map to an access of the second 4k shadow page
+// ... and so on ...
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[a >> 4])
+#else
+#define MEMCHECK(mem, a, t) RANGE_CHECK(mem, a, sizeof(t))
+#endif
+
+#ifdef WASM_RT_NOINLINE
+#define MAYBEINLINE __attribute__ ((noinline))
+#else
+#define MAYBEINLINE inline
 #endif
 
 #if WABT_BIG_ENDIAN
-static inline void load_data(void* dest, const void* src, size_t n) {
+static MAYBEINLINE void load_data(void* dest, const void* src, size_t n) {
   if (!n) {
     return;
   }
@@ -82,7 +92,7 @@ static inline void load_data(void* dest, const void* src, size_t n) {
     load_data(&(m.data[m.size - o - s]), i, s); \
   } while (0)
 #define DEFINE_LOAD(name, t1, t2, t3, force_read)                      \
-  static inline t3 name(wasm_rt_memory_t* mem, u64 addr) {             \
+  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) {             \
     MEMCHECK(mem, addr, t1);                                           \
     t1 result;                                                         \
     wasm_rt_memcpy(&result, &mem->data[mem->size - addr - sizeof(t1)], \
@@ -92,14 +102,14 @@ static inline void load_data(void* dest, const void* src, size_t n) {
   }
 
 #define DEFINE_STORE(name, t1, t2)                                      \
-  static inline void name(wasm_rt_memory_t* mem, u64 addr, t2 value) {  \
+  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) {  \
     MEMCHECK(mem, addr, t1);                                            \
     t1 wrapped = (t1)value;                                             \
     wasm_rt_memcpy(&mem->data[mem->size - addr - sizeof(t1)], &wrapped, \
                    sizeof(t1));                                         \
   }
 #else
-static inline void load_data(void* dest, const void* src, size_t n) {
+static MAYBEINLINE void load_data(void* dest, const void* src, size_t n) {
   if (!n) {
     return;
   }
@@ -111,7 +121,7 @@ static inline void load_data(void* dest, const void* src, size_t n) {
     load_data(&(m.data[o]), i, s); \
   } while (0)
 #define DEFINE_LOAD(name, t1, t2, t3, force_read)          \
-  static inline t3 name(wasm_rt_memory_t* mem, u64 addr) { \
+  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) { \
     MEMCHECK(mem, addr, t1);                               \
     t1 result;                                             \
     wasm_rt_memcpy(&result, &mem->data[addr], sizeof(t1)); \
@@ -120,7 +130,7 @@ static inline void load_data(void* dest, const void* src, size_t n) {
   }
 
 #define DEFINE_STORE(name, t1, t2)                                     \
-  static inline void name(wasm_rt_memory_t* mem, u64 addr, t2 value) { \
+  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) { \
     MEMCHECK(mem, addr, t1);                                           \
     t1 wrapped = (t1)value;                                            \
     wasm_rt_memcpy(&mem->data[addr], &wrapped, sizeof(t1));            \
@@ -156,7 +166,7 @@ DEFINE_STORE(i64_store32, u32, u64)
 // Adapted from
 // https://github.com/nemequ/portable-snippets/blob/master/builtin/builtin.h
 
-static inline int I64_CLZ(unsigned long long v) {
+static MAYBEINLINE int I64_CLZ(unsigned long long v) {
   unsigned long r = 0;
 #if defined(_M_AMD64) || defined(_M_ARM)
   if (_BitScanReverse64(&r, v)) {
@@ -172,7 +182,7 @@ static inline int I64_CLZ(unsigned long long v) {
   return 64;
 }
 
-static inline int I32_CLZ(unsigned long v) {
+static MAYBEINLINE int I32_CLZ(unsigned long v) {
   unsigned long r = 0;
   if (_BitScanReverse(&r, v)) {
     return 31 - r;
@@ -180,7 +190,7 @@ static inline int I32_CLZ(unsigned long v) {
   return 32;
 }
 
-static inline int I64_CTZ(unsigned long long v) {
+static MAYBEINLINE int I64_CTZ(unsigned long long v) {
   if (!v) {
     return 64;
   }
@@ -198,7 +208,7 @@ static inline int I64_CTZ(unsigned long long v) {
 #endif
 }
 
-static inline int I32_CTZ(unsigned long v) {
+static MAYBEINLINE int I32_CTZ(unsigned long v) {
   if (!v) {
     return 32;
   }
@@ -208,7 +218,7 @@ static inline int I32_CTZ(unsigned long v) {
 }
 
 #define POPCOUNT_DEFINE_PORTABLE(f_n, T)                            \
-  static inline u32 f_n(T x) {                                      \
+  static MAYBEINLINE u32 f_n(T x) {                                      \
     x = x - ((x >> 1) & (T) ~(T)0 / 3);                             \
     x = (x & (T) ~(T)0 / 15 * 3) + ((x >> 2) & (T) ~(T)0 / 15 * 3); \
     x = (x + (x >> 4)) & (T) ~(T)0 / 255 * 15;                      \
@@ -340,7 +350,7 @@ POPCOUNT_DEFINE_PORTABLE(I64_POPCNT, u64)
   TRUNC_SAT_U(u64, f64, (f64)UINT64_MAX, UINT64_MAX, x)
 
 #define DEFINE_REINTERPRET(name, t1, t2)         \
-  static inline t2 name(t1 x) {                  \
+  static MAYBEINLINE t2 name(t1 x) {                  \
     t2 result;                                   \
     wasm_rt_memcpy(&result, &x, sizeof(result)); \
     return result;                               \
