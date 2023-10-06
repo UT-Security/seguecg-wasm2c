@@ -36,6 +36,10 @@
 #include <sys/mman.h>
 #endif
 
+#if WASM_RT_USE_SEGUE
+#include <immintrin.h>
+#endif
+
 #define PAGE_SIZE 65536
 #define OSPAGE_SIZE 4096
 
@@ -314,6 +318,10 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   memory->data = calloc(byte_length, 1);
 #endif
 
+#if WASM_RT_USE_SEGUE
+  _writegsbase_u64((uintptr_t)memory->data);
+#endif
+
 #if WASM_RT_MEMCHECK_SHADOW_PAGE
   const uint64_t shadow_memory_size = max_pages * OSPAGE_SIZE;
   void* shadow_memory = os_mmap(shadow_memory_size);
@@ -323,7 +331,8 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   }
 
   uint64_t shadow_byte_length = initial_pages * OSPAGE_SIZE;
-#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==3 || WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==4
+#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 3 || \
+    WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
   int shadow_ret = os_mprotect(shadow_memory, shadow_byte_length);
 #else
   int shadow_ret = os_mprotect_read(shadow_memory, shadow_byte_length);
@@ -338,21 +347,22 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
 
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
 
-#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==1
-  memory->shadow_bytes = (uint8_t*) malloc(max_pages * sizeof(uint8_t));
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
+  memory->shadow_bytes = (uint8_t*)malloc(max_pages * sizeof(uint8_t));
   const size_t shadow_zero_size = (max_pages - initial_pages) * sizeof(uint8_t);
-#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==2
-  memory->shadow_bytes = (uint32_t*) malloc(max_pages * sizeof(uint32_t));
-  const size_t shadow_zero_size = (max_pages - initial_pages) * sizeof(uint32_t);
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
+  memory->shadow_bytes = (uint32_t*)malloc(max_pages * sizeof(uint32_t));
+  const size_t shadow_zero_size =
+      (max_pages - initial_pages) * sizeof(uint32_t);
 #else
 #error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME"
 #endif
 
-for (uint64_t i = 0; i < initial_pages; i++) {
-  memory->shadow_bytes[i] = 1;
-}
+  for (uint64_t i = 0; i < initial_pages; i++) {
+    memory->shadow_bytes[i] = 1;
+  }
 
-memset(&(memory->shadow_bytes[initial_pages]), 0, shadow_zero_size);
+  memset(&(memory->shadow_bytes[initial_pages]), 0, shadow_zero_size);
 
 #endif
 }
@@ -389,10 +399,13 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
   uint64_t shadow_old_size = old_pages * OSPAGE_SIZE;
   uint64_t shadow_new_size = new_pages * OSPAGE_SIZE;
   uint64_t shadow_delta_size = delta * OSPAGE_SIZE;
-#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==3 || WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==4
-  int shadow_ret = os_mprotect(memory->shadow_memory + shadow_old_size, shadow_delta_size);
+#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 3 || \
+    WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
+  int shadow_ret =
+      os_mprotect(memory->shadow_memory + shadow_old_size, shadow_delta_size);
 #else
-  int shadow_ret = os_mprotect_read(memory->shadow_memory + shadow_old_size, shadow_delta_size);
+  int shadow_ret = os_mprotect_read(memory->shadow_memory + shadow_old_size,
+                                    shadow_delta_size);
 #endif
   if (shadow_ret != 0) {
     return (uint64_t)-1;
@@ -400,9 +413,9 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
 #endif
 
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
-for (uint64_t i = old_pages; i < new_pages; i++) {
-  memory->shadow_bytes[i] = 1;
-}
+  for (uint64_t i = old_pages; i < new_pages; i++) {
+    memory->shadow_bytes[i] = 1;
+  }
 #endif
 
 #if WABT_BIG_ENDIAN

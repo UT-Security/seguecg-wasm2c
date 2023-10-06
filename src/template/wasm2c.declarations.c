@@ -59,16 +59,17 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #define MEMCHECK(mem, a, t)
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE
 
-// Access to the first 64k Wasm page should map to an access of the first 4k shadow page
-// Access to the second 64k Wasm page should map to an access of the second 4k shadow page
+// Access to the first 64k Wasm page should map to an access of the first 4k
+// shadow page Access to the second 64k Wasm page should map to an access of the
+// second 4k shadow page
 // ... and so on ...
-#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==1
+#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 1
 #define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[a >> 4])
-#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==2
+#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 2
 #define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[(a >> 16) << 4])
-#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==3
+#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 3
 #define MEMCHECK(mem, a, t) mem->shadow_memory[a >> 4] = 0
-#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==4
+#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
 #define MEMCHECK(mem, a, t) mem->shadow_memory[(a >> 16) << 4] = 0
 #else
 #error "WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME not defined"
@@ -76,10 +77,12 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES
 
-#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==1
-#define MEMCHECK(mem, a, t) FORCE_READ_INT( ((uint8_t)1) / mem->shadow_bytes[a >> 16] )
-#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==2
-#define MEMCHECK(mem, a, t) FORCE_READ_INT( ((uint32_t)1) / mem->shadow_bytes[a >> 16] )
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
+#define MEMCHECK(mem, a, t) \
+  FORCE_READ_INT(((uint8_t)1) / mem->shadow_bytes[a >> 16])
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
+#define MEMCHECK(mem, a, t) \
+  FORCE_READ_INT(((uint32_t)1) / mem->shadow_bytes[a >> 16])
 #else
 #error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME"
 #endif
@@ -89,47 +92,38 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #endif
 
 #ifdef WASM_RT_NOINLINE
-#define MAYBEINLINE __attribute__ ((noinline))
+#define MAYBEINLINE __attribute__((noinline))
 #else
 #define MAYBEINLINE inline
 #endif
 
-#if WABT_BIG_ENDIAN
-static MAYBEINLINE void load_data(void* dest, const void* src, size_t n) {
-  if (!n) {
-    return;
-  }
-  size_t i = 0;
-  u8* dest_chars = dest;
-  wasm_rt_memcpy(dest, src, n);
-  for (i = 0; i < (n >> 1); i++) {
-    u8 cursor = dest_chars[i];
-    dest_chars[i] = dest_chars[n - i - 1];
-    dest_chars[n - i - 1] = cursor;
-  }
-}
-#define LOAD_DATA(m, o, i, s)                   \
-  do {                                          \
-    RANGE_CHECK((&m), m.size - o - s, s);       \
-    load_data(&(m.data[m.size - o - s]), i, s); \
-  } while (0)
-#define DEFINE_LOAD(name, t1, t2, t3, force_read)                      \
-  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) {             \
-    MEMCHECK(mem, addr, t1);                                           \
-    t1 result;                                                         \
-    wasm_rt_memcpy(&result, &mem->data[mem->size - addr - sizeof(t1)], \
-                   sizeof(t1));                                        \
-    force_read(result);                                                \
-    return (t3)(t2)result;                                             \
+#if WASM_RT_USE_SEGUE
+
+#define MEMCPY_GS(TYPE)                                                  \
+  static MAYBEINLINE void memcpyfromgs_##TYPE(TYPE* target, u32 index) { \
+    TYPE __seg_gs* source = (TYPE __seg_gs*)(uintptr_t)index;            \
+    *target = *source;                                                   \
+  }                                                                      \
+  static MAYBEINLINE void memcpytogs_##TYPE(u32 index, TYPE* source) {   \
+    TYPE __seg_gs* target = (TYPE __seg_gs*)(uintptr_t)index;            \
+    *target = *source;                                                   \
   }
 
-#define DEFINE_STORE(name, t1, t2)                                      \
-  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) {  \
-    MEMCHECK(mem, addr, t1);                                            \
-    t1 wrapped = (t1)value;                                             \
-    wasm_rt_memcpy(&mem->data[mem->size - addr - sizeof(t1)], &wrapped, \
-                   sizeof(t1));                                         \
-  }
+MEMCPY_GS(u8);
+MEMCPY_GS(s8);
+MEMCPY_GS(u16);
+MEMCPY_GS(s16);
+MEMCPY_GS(u32);
+MEMCPY_GS(s32);
+MEMCPY_GS(u64);
+MEMCPY_GS(s64);
+MEMCPY_GS(f32);
+MEMCPY_GS(f64);
+
+#endif
+
+#if WABT_BIG_ENDIAN
+#error "Big endian not supported"
 #else
 static MAYBEINLINE void load_data(void* dest, const void* src, size_t n) {
   if (!n) {
@@ -142,21 +136,46 @@ static MAYBEINLINE void load_data(void* dest, const void* src, size_t n) {
     RANGE_CHECK((&m), o, s);       \
     load_data(&(m.data[o]), i, s); \
   } while (0)
-#define DEFINE_LOAD(name, t1, t2, t3, force_read)          \
+#define DEFINE_LOAD_REGULAR(name, t1, t2, t3, force_read)       \
   static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) { \
-    MEMCHECK(mem, addr, t1);                               \
-    t1 result;                                             \
-    wasm_rt_memcpy(&result, &mem->data[addr], sizeof(t1)); \
-    force_read(result);                                    \
-    return (t3)(t2)result;                                 \
+    MEMCHECK(mem, addr, t1);                                    \
+    t1 result;                                                  \
+    wasm_rt_memcpy(&result, &mem->data[addr], sizeof(t1));      \
+    force_read(result);                                         \
+    return (t3)(t2)result;                                      \
   }
 
-#define DEFINE_STORE(name, t1, t2)                                     \
+#define DEFINE_STORE_REGULAR(name, t1, t2)                                  \
   static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) { \
-    MEMCHECK(mem, addr, t1);                                           \
-    t1 wrapped = (t1)value;                                            \
-    wasm_rt_memcpy(&mem->data[addr], &wrapped, sizeof(t1));            \
+    MEMCHECK(mem, addr, t1);                                                \
+    t1 wrapped = (t1)value;                                                 \
+    wasm_rt_memcpy(&mem->data[addr], &wrapped, sizeof(t1));                 \
   }
+
+#define DEFINE_LOAD_GS(name, t1, t2, t3, force_read)            \
+  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) { \
+    MEMCHECK(mem, addr, t1);                                    \
+    t1 result;                                                  \
+    memcpyfromgs_##t1(&result, addr);                           \
+    force_read(result);                                         \
+    return (t3)(t2)result;                                      \
+  }
+
+#define DEFINE_STORE_GS(name, t1, t2)                                       \
+  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) { \
+    MEMCHECK(mem, addr, t1);                                                \
+    t1 wrapped = (t1)value;                                                 \
+    memcpytogs_##t1(addr, &wrapped);                                        \
+  }
+
+#endif
+
+#if WASM_RT_USE_SEGUE
+#define DEFINE_LOAD DEFINE_LOAD_GS
+#define DEFINE_STORE DEFINE_STORE_GS
+#else
+#define DEFINE_LOAD DEFINE_LOAD_REGULAR
+#define DEFINE_STORE DEFINE_STORE_REGULAR
 #endif
 
 DEFINE_LOAD(i32_load, u32, u32, u32, FORCE_READ_INT)
@@ -240,7 +259,7 @@ static MAYBEINLINE int I32_CTZ(unsigned long v) {
 }
 
 #define POPCOUNT_DEFINE_PORTABLE(f_n, T)                            \
-  static MAYBEINLINE u32 f_n(T x) {                                      \
+  static MAYBEINLINE u32 f_n(T x) {                                 \
     x = x - ((x >> 1) & (T) ~(T)0 / 3);                             \
     x = (x & (T) ~(T)0 / 15 * 3) + ((x >> 2) & (T) ~(T)0 / 15 * 3); \
     x = (x + (x >> 4)) & (T) ~(T)0 / 255 * 15;                      \
@@ -372,7 +391,7 @@ POPCOUNT_DEFINE_PORTABLE(I64_POPCNT, u64)
   TRUNC_SAT_U(u64, f64, (f64)UINT64_MAX, UINT64_MAX, x)
 
 #define DEFINE_REINTERPRET(name, t1, t2)         \
-  static MAYBEINLINE t2 name(t1 x) {                  \
+  static MAYBEINLINE t2 name(t1 x) {             \
     t2 result;                                   \
     wasm_rt_memcpy(&result, &x, sizeof(result)); \
     return result;                               \

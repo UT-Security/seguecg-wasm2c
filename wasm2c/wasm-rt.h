@@ -78,6 +78,10 @@ extern "C" {
     "WASM_RT_MEMCHECK_SIGNAL_HANDLER has been deprecated in favor of WASM_RT_USE_MMAP and WASM_RT_MEMORY_CHECK_* macros"
 #endif
 
+#ifndef WASM_RT_USE_SEGUE
+#define WASM_RT_USE_SEGUE 0
+#endif
+
 /**
  * Specify if we use OR mmap/mprotect (+ Windows equivalents) OR malloc/realloc
  * for the Wasm memory allocation and growth. mmap/mprotect guarantees memory
@@ -118,9 +122,9 @@ extern "C" {
 #endif
 
 // Specify defaults for memory checks if unspecified
-#if !defined(WASM_RT_MEMCHECK_GUARD_PAGES) && \
+#if !defined(WASM_RT_MEMCHECK_GUARD_PAGES) &&  \
     !defined(WASM_RT_MEMCHECK_BOUNDS_CHECK) && \
-    !defined(WASM_RT_MEMCHECK_SHADOW_PAGE) && \
+    !defined(WASM_RT_MEMCHECK_SHADOW_PAGE) &&  \
     !defined(WASM_RT_MEMCHECK_SHADOW_BYTES)
 #if WASM_RT_GUARD_PAGES_SUPPORTED
 #define WASM_RT_MEMCHECK_GUARD_PAGES 1
@@ -149,9 +153,11 @@ extern "C" {
     "WASM_RT_MEMCHECK_GUARD_PAGES not supported on this platform/configuration"
 #endif
 
-#if (WASM_RT_MEMCHECK_GUARD_PAGES + WASM_RT_MEMCHECK_BOUNDS_CHECK + WASM_RT_MEMCHECK_SHADOW_PAGE + WASM_RT_MEMCHECK_SHADOW_BYTES) > 1
+#if (WASM_RT_MEMCHECK_GUARD_PAGES + WASM_RT_MEMCHECK_BOUNDS_CHECK + \
+     WASM_RT_MEMCHECK_SHADOW_PAGE + WASM_RT_MEMCHECK_SHADOW_BYTES) > 1
 #error "Cannot use multiple memcheck schemes"
-#elif (WASM_RT_MEMCHECK_GUARD_PAGES + WASM_RT_MEMCHECK_BOUNDS_CHECK + WASM_RT_MEMCHECK_SHADOW_PAGE + WASM_RT_MEMCHECK_SHADOW_BYTES) == 0
+#elif (WASM_RT_MEMCHECK_GUARD_PAGES + WASM_RT_MEMCHECK_BOUNDS_CHECK + \
+       WASM_RT_MEMCHECK_SHADOW_PAGE + WASM_RT_MEMCHECK_SHADOW_BYTES) == 0
 #error "Must choose at least one memcheck scheme"
 #endif
 
@@ -223,7 +229,7 @@ typedef enum {
   WASM_RT_TRAP_UNREACHABLE,        /** Unreachable instruction executed. */
   WASM_RT_TRAP_CALL_INDIRECT,      /** Invalid call_indirect, for any reason. */
   WASM_RT_TRAP_UNCAUGHT_EXCEPTION, /* Exception thrown and not caught. */
-  WASM_RT_TRAP_UNALIGNED, /** Unaligned atomic instruction executed. */
+  WASM_RT_TRAP_UNALIGNED,          /** Unaligned atomic instruction executed. */
 #if WASM_RT_MERGED_OOB_AND_EXHAUSTION_TRAPS
   WASM_RT_TRAP_EXHAUSTION = WASM_RT_TRAP_OOB,
 #else
@@ -297,9 +303,9 @@ typedef struct {
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
 
 /** Pointer to shadow bytes*/
-#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==1
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
   uint8_t* shadow_bytes;
-#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==2
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
   uint32_t* shadow_bytes;
 #else
 #error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME"

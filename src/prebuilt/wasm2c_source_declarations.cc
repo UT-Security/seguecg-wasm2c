@@ -109,25 +109,27 @@ R"w2c_template(#define MEMCHECK(mem, a, t)
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE
 )w2c_template"
 R"w2c_template(
-// Access to the first 64k Wasm page should map to an access of the first 4k shadow page
+// Access to the first 64k Wasm page should map to an access of the first 4k
 )w2c_template"
-R"w2c_template(// Access to the second 64k Wasm page should map to an access of the second 4k shadow page
+R"w2c_template(// shadow page Access to the second 64k Wasm page should map to an access of the
+)w2c_template"
+R"w2c_template(// second 4k shadow page
 )w2c_template"
 R"w2c_template(// ... and so on ...
 )w2c_template"
-R"w2c_template(#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==1
+R"w2c_template(#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 1
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[a >> 4])
 )w2c_template"
-R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==2
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 2
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[(a >> 16) << 4])
 )w2c_template"
-R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==3
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 3
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) mem->shadow_memory[a >> 4] = 0
 )w2c_template"
-R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME==4
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) mem->shadow_memory[(a >> 16) << 4] = 0
 )w2c_template"
@@ -141,13 +143,17 @@ R"w2c_template(
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES
 )w2c_template"
 R"w2c_template(
-#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==1
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT( ((uint8_t)1) / mem->shadow_bytes[a >> 16] )
+R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
-R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==2
+R"w2c_template(  FORCE_READ_INT(((uint8_t)1) / mem->shadow_bytes[a >> 16])
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT( ((uint32_t)1) / mem->shadow_bytes[a >> 16] )
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  FORCE_READ_INT(((uint32_t)1) / mem->shadow_bytes[a >> 16])
 )w2c_template"
 R"w2c_template(#else
 )w2c_template"
@@ -165,7 +171,7 @@ R"w2c_template(#endif
 R"w2c_template(
 #ifdef WASM_RT_NOINLINE
 )w2c_template"
-R"w2c_template(#define MAYBEINLINE __attribute__ ((noinline))
+R"w2c_template(#define MAYBEINLINE __attribute__((noinline))
 )w2c_template"
 R"w2c_template(#else
 )w2c_template"
@@ -174,76 +180,55 @@ R"w2c_template(#define MAYBEINLINE inline
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(
-#if WABT_BIG_ENDIAN
+#if WASM_RT_USE_SEGUE
 )w2c_template"
-R"w2c_template(static MAYBEINLINE void load_data(void* dest, const void* src, size_t n) {
+R"w2c_template(
+#define MEMCPY_GS(TYPE)                                                  \
 )w2c_template"
-R"w2c_template(  if (!n) {
+R"w2c_template(  static MAYBEINLINE void memcpyfromgs_##TYPE(TYPE* target, u32 index) { \
 )w2c_template"
-R"w2c_template(    return;
+R"w2c_template(    TYPE __seg_gs* source = (TYPE __seg_gs*)(uintptr_t)index;            \
 )w2c_template"
-R"w2c_template(  }
+R"w2c_template(    *target = *source;                                                   \
 )w2c_template"
-R"w2c_template(  size_t i = 0;
+R"w2c_template(  }                                                                      \
 )w2c_template"
-R"w2c_template(  u8* dest_chars = dest;
+R"w2c_template(  static MAYBEINLINE void memcpytogs_##TYPE(u32 index, TYPE* source) {   \
 )w2c_template"
-R"w2c_template(  wasm_rt_memcpy(dest, src, n);
+R"w2c_template(    TYPE __seg_gs* target = (TYPE __seg_gs*)(uintptr_t)index;            \
 )w2c_template"
-R"w2c_template(  for (i = 0; i < (n >> 1); i++) {
-)w2c_template"
-R"w2c_template(    u8 cursor = dest_chars[i];
-)w2c_template"
-R"w2c_template(    dest_chars[i] = dest_chars[n - i - 1];
-)w2c_template"
-R"w2c_template(    dest_chars[n - i - 1] = cursor;
-)w2c_template"
-R"w2c_template(  }
-)w2c_template"
-R"w2c_template(}
-)w2c_template"
-R"w2c_template(#define LOAD_DATA(m, o, i, s)                   \
-)w2c_template"
-R"w2c_template(  do {                                          \
-)w2c_template"
-R"w2c_template(    RANGE_CHECK((&m), m.size - o - s, s);       \
-)w2c_template"
-R"w2c_template(    load_data(&(m.data[m.size - o - s]), i, s); \
-)w2c_template"
-R"w2c_template(  } while (0)
-)w2c_template"
-R"w2c_template(#define DEFINE_LOAD(name, t1, t2, t3, force_read)                      \
-)w2c_template"
-R"w2c_template(  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) {             \
-)w2c_template"
-R"w2c_template(    MEMCHECK(mem, addr, t1);                                           \
-)w2c_template"
-R"w2c_template(    t1 result;                                                         \
-)w2c_template"
-R"w2c_template(    wasm_rt_memcpy(&result, &mem->data[mem->size - addr - sizeof(t1)], \
-)w2c_template"
-R"w2c_template(                   sizeof(t1));                                        \
-)w2c_template"
-R"w2c_template(    force_read(result);                                                \
-)w2c_template"
-R"w2c_template(    return (t3)(t2)result;                                             \
+R"w2c_template(    *target = *source;                                                   \
 )w2c_template"
 R"w2c_template(  }
 )w2c_template"
 R"w2c_template(
-#define DEFINE_STORE(name, t1, t2)                                      \
+MEMCPY_GS(u8);
 )w2c_template"
-R"w2c_template(  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) {  \
+R"w2c_template(MEMCPY_GS(s8);
 )w2c_template"
-R"w2c_template(    MEMCHECK(mem, addr, t1);                                            \
+R"w2c_template(MEMCPY_GS(u16);
 )w2c_template"
-R"w2c_template(    t1 wrapped = (t1)value;                                             \
+R"w2c_template(MEMCPY_GS(s16);
 )w2c_template"
-R"w2c_template(    wasm_rt_memcpy(&mem->data[mem->size - addr - sizeof(t1)], &wrapped, \
+R"w2c_template(MEMCPY_GS(u32);
 )w2c_template"
-R"w2c_template(                   sizeof(t1));                                         \
+R"w2c_template(MEMCPY_GS(s32);
 )w2c_template"
-R"w2c_template(  }
+R"w2c_template(MEMCPY_GS(u64);
+)w2c_template"
+R"w2c_template(MEMCPY_GS(s64);
+)w2c_template"
+R"w2c_template(MEMCPY_GS(f32);
+)w2c_template"
+R"w2c_template(MEMCPY_GS(f64);
+)w2c_template"
+R"w2c_template(
+#endif
+)w2c_template"
+R"w2c_template(
+#if WABT_BIG_ENDIAN
+)w2c_template"
+R"w2c_template(#error "Big endian not supported"
 )w2c_template"
 R"w2c_template(#else
 )w2c_template"
@@ -269,34 +254,80 @@ R"w2c_template(    load_data(&(m.data[o]), i, s); \
 )w2c_template"
 R"w2c_template(  } while (0)
 )w2c_template"
-R"w2c_template(#define DEFINE_LOAD(name, t1, t2, t3, force_read)          \
+R"w2c_template(#define DEFINE_LOAD_REGULAR(name, t1, t2, t3, force_read)       \
 )w2c_template"
 R"w2c_template(  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) { \
 )w2c_template"
-R"w2c_template(    MEMCHECK(mem, addr, t1);                               \
+R"w2c_template(    MEMCHECK(mem, addr, t1);                                    \
 )w2c_template"
-R"w2c_template(    t1 result;                                             \
+R"w2c_template(    t1 result;                                                  \
 )w2c_template"
-R"w2c_template(    wasm_rt_memcpy(&result, &mem->data[addr], sizeof(t1)); \
+R"w2c_template(    wasm_rt_memcpy(&result, &mem->data[addr], sizeof(t1));      \
 )w2c_template"
-R"w2c_template(    force_read(result);                                    \
+R"w2c_template(    force_read(result);                                         \
 )w2c_template"
-R"w2c_template(    return (t3)(t2)result;                                 \
+R"w2c_template(    return (t3)(t2)result;                                      \
 )w2c_template"
 R"w2c_template(  }
 )w2c_template"
 R"w2c_template(
-#define DEFINE_STORE(name, t1, t2)                                     \
+#define DEFINE_STORE_REGULAR(name, t1, t2)                                  \
 )w2c_template"
 R"w2c_template(  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) { \
 )w2c_template"
-R"w2c_template(    MEMCHECK(mem, addr, t1);                                           \
+R"w2c_template(    MEMCHECK(mem, addr, t1);                                                \
 )w2c_template"
-R"w2c_template(    t1 wrapped = (t1)value;                                            \
+R"w2c_template(    t1 wrapped = (t1)value;                                                 \
 )w2c_template"
-R"w2c_template(    wasm_rt_memcpy(&mem->data[addr], &wrapped, sizeof(t1));            \
+R"w2c_template(    wasm_rt_memcpy(&mem->data[addr], &wrapped, sizeof(t1));                 \
 )w2c_template"
 R"w2c_template(  }
+)w2c_template"
+R"w2c_template(
+#define DEFINE_LOAD_GS(name, t1, t2, t3, force_read)            \
+)w2c_template"
+R"w2c_template(  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) { \
+)w2c_template"
+R"w2c_template(    MEMCHECK(mem, addr, t1);                                    \
+)w2c_template"
+R"w2c_template(    t1 result;                                                  \
+)w2c_template"
+R"w2c_template(    memcpyfromgs_##t1(&result, addr);                           \
+)w2c_template"
+R"w2c_template(    force_read(result);                                         \
+)w2c_template"
+R"w2c_template(    return (t3)(t2)result;                                      \
+)w2c_template"
+R"w2c_template(  }
+)w2c_template"
+R"w2c_template(
+#define DEFINE_STORE_GS(name, t1, t2)                                       \
+)w2c_template"
+R"w2c_template(  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) { \
+)w2c_template"
+R"w2c_template(    MEMCHECK(mem, addr, t1);                                                \
+)w2c_template"
+R"w2c_template(    t1 wrapped = (t1)value;                                                 \
+)w2c_template"
+R"w2c_template(    memcpytogs_##t1(addr, &wrapped);                                        \
+)w2c_template"
+R"w2c_template(  }
+)w2c_template"
+R"w2c_template(
+#endif
+)w2c_template"
+R"w2c_template(
+#if WASM_RT_USE_SEGUE
+)w2c_template"
+R"w2c_template(#define DEFINE_LOAD DEFINE_LOAD_GS
+)w2c_template"
+R"w2c_template(#define DEFINE_STORE DEFINE_STORE_GS
+)w2c_template"
+R"w2c_template(#else
+)w2c_template"
+R"w2c_template(#define DEFINE_LOAD DEFINE_LOAD_REGULAR
+)w2c_template"
+R"w2c_template(#define DEFINE_STORE DEFINE_STORE_REGULAR
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
@@ -455,7 +486,7 @@ R"w2c_template(}
 R"w2c_template(
 #define POPCOUNT_DEFINE_PORTABLE(f_n, T)                            \
 )w2c_template"
-R"w2c_template(  static MAYBEINLINE u32 f_n(T x) {                                      \
+R"w2c_template(  static MAYBEINLINE u32 f_n(T x) {                                 \
 )w2c_template"
 R"w2c_template(    x = x - ((x >> 1) & (T) ~(T)0 / 3);                             \
 )w2c_template"
@@ -696,7 +727,7 @@ R"w2c_template(  TRUNC_SAT_U(u64, f64, (f64)UINT64_MAX, UINT64_MAX, x)
 R"w2c_template(
 #define DEFINE_REINTERPRET(name, t1, t2)         \
 )w2c_template"
-R"w2c_template(  static MAYBEINLINE t2 name(t1 x) {                  \
+R"w2c_template(  static MAYBEINLINE t2 name(t1 x) {             \
 )w2c_template"
 R"w2c_template(    t2 result;                                   \
 )w2c_template"
