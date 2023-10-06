@@ -335,6 +335,26 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
 
   memory->shadow_memory = shadow_memory;
 #endif
+
+#if WASM_RT_MEMCHECK_SHADOW_BYTES
+
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==1
+  memory->shadow_bytes = (uint8_t*) malloc(max_pages * sizeof(uint8_t));
+  const size_t shadow_zero_size = (max_pages - initial_pages) * sizeof(uint8_t);
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==2
+  memory->shadow_bytes = (uint32_t*) malloc(max_pages * sizeof(uint32_t));
+  const size_t shadow_zero_size = (max_pages - initial_pages) * sizeof(uint32_t);
+#else
+#error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME"
+#endif
+
+for (uint64_t i = 0; i < initial_pages; i++) {
+  memory->shadow_bytes[i] = 1;
+}
+
+memset(&(memory->shadow_bytes[initial_pages]), 0, shadow_zero_size);
+
+#endif
 }
 
 static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
@@ -379,6 +399,12 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
   }
 #endif
 
+#if WASM_RT_MEMCHECK_SHADOW_BYTES
+for (uint64_t i = old_pages; i < new_pages; i++) {
+  memory->shadow_bytes[i] = 1;
+}
+#endif
+
 #if WABT_BIG_ENDIAN
   memmove(new_data + new_size - old_size, new_data, old_size);
   memset(new_data, 0, delta_size);
@@ -405,6 +431,15 @@ void wasm_rt_free_memory(wasm_rt_memory_t* memory) {
   os_munmap(memory->data, mmap_size);  // ignore error
 #else
   free(memory->data);
+#endif
+
+#if WASM_RT_MEMCHECK_SHADOW_PAGE
+  const uint64_t shadow_memory_size = memory->max_pages * OSPAGE_SIZE;
+  os_munmap(memory->shadow_memory, shadow_memory_size);  // ignore error
+#endif
+
+#if WASM_RT_MEMCHECK_SHADOW_BYTES
+  free(memory->shadow_bytes);
 #endif
 }
 

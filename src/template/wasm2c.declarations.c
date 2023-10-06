@@ -74,6 +74,16 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #error "WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME not defined"
 #endif
 
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES
+
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==1
+#define MEMCHECK(mem, a, t) FORCE_READ_INT( ((uint8_t)1) / mem->shadow_bytes[a >> 16] )
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==2
+#define MEMCHECK(mem, a, t) FORCE_READ_INT( ((uint32_t)1) / mem->shadow_bytes[a >> 16] )
+#else
+#error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME"
+#endif
+
 #else
 #define MEMCHECK(mem, a, t) RANGE_CHECK(mem, a, sizeof(t))
 #endif

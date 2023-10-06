@@ -138,6 +138,24 @@ R"w2c_template(#error "WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME not defined"
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES
+)w2c_template"
+R"w2c_template(
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==1
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT( ((uint8_t)1) / mem->shadow_bytes[a >> 16] )
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME==2
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT( ((uint32_t)1) / mem->shadow_bytes[a >> 16] )
+)w2c_template"
+R"w2c_template(#else
+)w2c_template"
+R"w2c_template(#error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME"
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
 #else
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) RANGE_CHECK(mem, a, sizeof(t))
