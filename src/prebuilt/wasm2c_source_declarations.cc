@@ -173,13 +173,25 @@ R"w2c_template(#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
-R"w2c_template(  FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 34))
+R"w2c_template(  FORCE_READ_INT(WASM_RT_GS_REF(u32, a >> 32))
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
-R"w2c_template(  FORCE_READ_INT(WASM_RT_GS_REF(u32, a >> 34))
+R"w2c_template(  FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 32))
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 3
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 16))
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 4
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 24))
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
@@ -189,13 +201,25 @@ R"w2c_template(#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
-R"w2c_template(  FORCE_READ_INT(mem->shadow_bytes[a >> 34])
+R"w2c_template(  FORCE_READ_INT(mem->shadow_bytes[a >> 32])
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
-R"w2c_template(  FORCE_READ_INT(mem->shadow_bytes[a >> 34])
+R"w2c_template(  FORCE_READ_INT(mem->shadow_bytes[a >> 32])
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 3
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  FORCE_READ_INT(mem->shadow_bytes[a >> 16])
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 4
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  FORCE_READ_INT(mem->shadow_bytes[a >> 24])
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"

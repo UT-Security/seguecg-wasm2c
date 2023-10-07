@@ -319,9 +319,9 @@ typedef struct {
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
 /** Pointer to shadow bytes*/
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
-  uint8_t* shadow_bytes;
-#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
   uint32_t* shadow_bytes;
+#else
+  uint8_t* shadow_bytes;
 #endif
 #endif
 #if WASM_RT_MEMCHECK_DEBUG_WATCH

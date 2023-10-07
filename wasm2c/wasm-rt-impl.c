@@ -359,14 +359,9 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
 #endif
 
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
-#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
-  memory->shadow_bytes = (uint8_t*)malloc(max_pages * sizeof(uint8_t));
-  const size_t shadow_zero_size = (max_pages - initial_pages) * sizeof(uint8_t);
-#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
-  memory->shadow_bytes = (uint32_t*)malloc(max_pages * sizeof(uint32_t));
+  memory->shadow_bytes = malloc(max_pages * sizeof(memory->shadow_bytes[0]));
   const size_t shadow_zero_size =
-      (max_pages - initial_pages) * sizeof(uint32_t);
-#endif
+      (max_pages - initial_pages) * sizeof(memory->shadow_bytes[0]);
 
   for (uint64_t i = 0; i < initial_pages; i++) {
     memory->shadow_bytes[i] = 1;
