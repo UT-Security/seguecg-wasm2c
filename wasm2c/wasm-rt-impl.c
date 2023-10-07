@@ -332,9 +332,9 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
 
 #if WASM_RT_MEMCHECK_SHADOW_PAGE
   const uint64_t shadow_memory_size = max_pages * OSPAGE_SIZE;
-  void* shadow_memory = os_mmap_read(shadow_memory_size);
+  void* shadow_memory = os_mmap(shadow_memory_size);
   if (!shadow_memory) {
-    os_print_last_error("os_mmap_read shadow failed.");
+    os_print_last_error("os_mmap shadow failed.");
     abort();
   }
 
@@ -343,7 +343,7 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
     WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
   int shadow_ret = os_mprotect(shadow_memory, shadow_byte_length);
 #else
-  int shadow_ret = 0; //os_mprotect_read(shadow_memory, shadow_byte_length);
+  int shadow_ret = os_mprotect_read(shadow_memory, shadow_byte_length);
 #endif
   if (shadow_ret != 0) {
     os_print_last_error("os_mprotect shadow failed.");

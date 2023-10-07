@@ -164,8 +164,8 @@ extern "C" {
 #endif
 
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
-#if !defined(WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME) || WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME < 1 || WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME > 4
-#error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME between 1 and 4"
+#if !defined(WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME) || WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME < 1 || WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME > 8
+#error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME between 1 and 8"
 #endif
 #endif
 
@@ -318,7 +318,7 @@ typedef struct {
 #endif
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
 /** Pointer to shadow bytes*/
-#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 || WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 5
   uint32_t* shadow_bytes;
 #else
   uint8_t* shadow_bytes;

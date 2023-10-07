@@ -193,6 +193,30 @@ R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
 R"w2c_template(  FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 24))
 )w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 5
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  WASM_RT_GS_REF(u32, a >> 32) = 0
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 6
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  WASM_RT_GS_REF(u8, a >> 32) = 0
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 7
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  WASM_RT_GS_REF(u8, a >> 16) = 0
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 8
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  WASM_RT_GS_REF(u8, a >> 24) = 0
+)w2c_template"
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(#else
@@ -220,6 +244,30 @@ R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 4
 R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
 R"w2c_template(  FORCE_READ_INT(mem->shadow_bytes[a >> 24])
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 5
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  mem->shadow_bytes[a >> 32] = 0
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 6
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  mem->shadow_bytes[a >> 32] = 0
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 7
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  mem->shadow_bytes[a >> 16] = 0
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 8
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  mem->shadow_bytes[a >> 24] = 0
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
