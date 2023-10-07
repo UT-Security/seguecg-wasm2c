@@ -139,10 +139,6 @@ R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, (a >> 16) << 4) = 0
 )w2c_template"
-R"w2c_template(#else
-)w2c_template"
-R"w2c_template(#error "WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME not defined"
-)w2c_template"
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(#else
@@ -163,10 +159,6 @@ R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) mem->shadow_memory[(a >> 16) << 4] = 0
 )w2c_template"
-R"w2c_template(#else
-)w2c_template"
-R"w2c_template(#error "WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME not defined"
-)w2c_template"
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(#endif
@@ -181,17 +173,13 @@ R"w2c_template(#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
-R"w2c_template(  FORCE_READ_INT(((uint8_t)1) / WASM_RT_GS_REF(u8, a >> 16))
+R"w2c_template(  FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 34))
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
-R"w2c_template(  FORCE_READ_INT(((uint32_t)1) / WASM_RT_GS_REF(u32, a >> 16))
-)w2c_template"
-R"w2c_template(#else
-)w2c_template"
-R"w2c_template(#error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME"
+R"w2c_template(  FORCE_READ_INT(WASM_RT_GS_REF(u32, a >> 34))
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
@@ -201,19 +189,29 @@ R"w2c_template(#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
-R"w2c_template(  FORCE_READ_INT(((uint8_t)1) / mem->shadow_bytes[a >> 16])
+R"w2c_template(  FORCE_READ_INT(mem->shadow_bytes[a >> 34])
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) \
 )w2c_template"
-R"w2c_template(  FORCE_READ_INT(((uint32_t)1) / mem->shadow_bytes[a >> 16])
+R"w2c_template(  FORCE_READ_INT(mem->shadow_bytes[a >> 34])
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
+#elif WASM_RT_MEMCHECK_DEBUG_WATCH
+)w2c_template"
+R"w2c_template(
+#if WASM_RT_USE_SHADOW_SEGUE
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u64, 0) = a
 )w2c_template"
 R"w2c_template(#else
 )w2c_template"
-R"w2c_template(#error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME"
-)w2c_template"
-R"w2c_template(#endif
+R"w2c_template(#define MEMCHECK(mem, a, t) mem->debug_watch_buffer = a
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"

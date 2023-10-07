@@ -167,6 +167,14 @@ static void* os_mmap(size_t size) {
     return NULL;
   return addr;
 }
+static void* os_mmap_read(size_t size) {
+  int map_prot = PROT_READ;
+  int map_flags = MAP_ANONYMOUS | MAP_PRIVATE;
+  uint8_t* addr = mmap(NULL, size, map_prot, map_flags, -1, 0);
+  if (addr == MAP_FAILED)
+    return NULL;
+  return addr;
+}
 
 static int os_munmap(void* addr, size_t size) {
   return munmap(addr, size);
@@ -324,9 +332,9 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
 
 #if WASM_RT_MEMCHECK_SHADOW_PAGE
   const uint64_t shadow_memory_size = max_pages * OSPAGE_SIZE;
-  void* shadow_memory = os_mmap(shadow_memory_size);
+  void* shadow_memory = os_mmap_read(shadow_memory_size);
   if (!shadow_memory) {
-    os_print_last_error("os_mmap shadow failed.");
+    os_print_last_error("os_mmap_read shadow failed.");
     abort();
   }
 
@@ -335,7 +343,7 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
     WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
   int shadow_ret = os_mprotect(shadow_memory, shadow_byte_length);
 #else
-  int shadow_ret = os_mprotect_read(shadow_memory, shadow_byte_length);
+  int shadow_ret = 0; //os_mprotect_read(shadow_memory, shadow_byte_length);
 #endif
   if (shadow_ret != 0) {
     os_print_last_error("os_mprotect shadow failed.");
@@ -351,7 +359,6 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
 #endif
 
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
-
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
   memory->shadow_bytes = (uint8_t*)malloc(max_pages * sizeof(uint8_t));
   const size_t shadow_zero_size = (max_pages - initial_pages) * sizeof(uint8_t);
@@ -359,8 +366,6 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   memory->shadow_bytes = (uint32_t*)malloc(max_pages * sizeof(uint32_t));
   const size_t shadow_zero_size =
       (max_pages - initial_pages) * sizeof(uint32_t);
-#else
-#error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME"
 #endif
 
   for (uint64_t i = 0; i < initial_pages; i++) {
@@ -372,7 +377,15 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
 #if WASM_RT_USE_SHADOW_SEGUE
   _writegsbase_u64((uintptr_t)memory->shadow_bytes);
 #endif
+#endif
 
+#if WASM_RT_MEMCHECK_DEBUG_WATCH
+  memory->debug_watch_buffer = 0;
+  // TODO: Add debug register watchpoints
+
+#if WASM_RT_USE_SHADOW_SEGUE
+  _writegsbase_u64((uintptr_t)&(memory->debug_watch_buffer));
+#endif
 #endif
 }
 
@@ -426,6 +439,8 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
     memory->shadow_bytes[i] = 1;
   }
 #endif
+
+// if WASM_RT_MEMCHECK_DEBUG_WATCH adjust debug watch
 
 #if WABT_BIG_ENDIAN
   memmove(new_data + new_size - old_size, new_data, old_size);

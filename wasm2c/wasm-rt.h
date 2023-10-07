@@ -125,7 +125,8 @@ extern "C" {
 #if !defined(WASM_RT_MEMCHECK_GUARD_PAGES) &&  \
     !defined(WASM_RT_MEMCHECK_BOUNDS_CHECK) && \
     !defined(WASM_RT_MEMCHECK_SHADOW_PAGE) &&  \
-    !defined(WASM_RT_MEMCHECK_SHADOW_BYTES)
+    !defined(WASM_RT_MEMCHECK_SHADOW_BYTES) && \
+    !defined(WASM_RT_MEMCHECK_DEBUG_WATCH)
 #if WASM_RT_GUARD_PAGES_SUPPORTED
 #define WASM_RT_MEMCHECK_GUARD_PAGES 1
 #else
@@ -146,6 +147,9 @@ extern "C" {
 #ifndef WASM_RT_MEMCHECK_SHADOW_BYTES
 #define WASM_RT_MEMCHECK_SHADOW_BYTES 0
 #endif
+#ifndef WASM_RT_MEMCHECK_DEBUG_WATCH
+#define WASM_RT_MEMCHECK_DEBUG_WATCH 0
+#endif
 
 // Sanity check the use of guard pages
 #if WASM_RT_MEMCHECK_GUARD_PAGES && !WASM_RT_GUARD_PAGES_SUPPORTED
@@ -153,11 +157,23 @@ extern "C" {
     "WASM_RT_MEMCHECK_GUARD_PAGES not supported on this platform/configuration"
 #endif
 
+#if WASM_RT_MEMCHECK_SHADOW_PAGE
+#if !defined(WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME) || WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME < 1 || WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME > 4
+#error "Expected value for WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME between 1 and 4"
+#endif
+#endif
+
+#if WASM_RT_MEMCHECK_SHADOW_BYTES
+#if !defined(WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME) || WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME < 1 || WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME > 4
+#error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME between 1 and 4"
+#endif
+#endif
+
 #if (WASM_RT_MEMCHECK_GUARD_PAGES + WASM_RT_MEMCHECK_BOUNDS_CHECK + \
-     WASM_RT_MEMCHECK_SHADOW_PAGE + WASM_RT_MEMCHECK_SHADOW_BYTES) > 1
+     WASM_RT_MEMCHECK_SHADOW_PAGE + WASM_RT_MEMCHECK_SHADOW_BYTES + WASM_RT_MEMCHECK_DEBUG_WATCH) > 1
 #error "Cannot use multiple memcheck schemes"
 #elif (WASM_RT_MEMCHECK_GUARD_PAGES + WASM_RT_MEMCHECK_BOUNDS_CHECK + \
-       WASM_RT_MEMCHECK_SHADOW_PAGE + WASM_RT_MEMCHECK_SHADOW_BYTES) == 0
+       WASM_RT_MEMCHECK_SHADOW_PAGE + WASM_RT_MEMCHECK_SHADOW_BYTES + WASM_RT_MEMCHECK_DEBUG_WATCH) == 0
 #error "Must choose at least one memcheck scheme"
 #endif
 
@@ -296,21 +312,20 @@ typedef struct {
   uint64_t size;
   /** Is this memory indexed by u64 (as opposed to default u32) */
   bool is64;
-#if WASM_RT_MEMCHECK_SHADOW_PAGE || WASM_RT_MEMCHECK_SHADOW_BYTES
+#if WASM_RT_MEMCHECK_SHADOW_PAGE
   /** Pointer to shadow memory*/
   uint8_t* shadow_memory;
 #endif
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
-
 /** Pointer to shadow bytes*/
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1
   uint8_t* shadow_bytes;
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2
   uint32_t* shadow_bytes;
-#else
-#error "Expected value for WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME"
 #endif
-
+#endif
+#if WASM_RT_MEMCHECK_DEBUG_WATCH
+  uint64_t debug_watch_buffer;
 #endif
 } wasm_rt_memory_t;
 
