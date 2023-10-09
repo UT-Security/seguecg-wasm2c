@@ -318,6 +318,8 @@ typedef struct {
 #endif
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
 /** Pointer to shadow bytes*/
+  char* shadow_bytes_allocation;
+  size_t shadow_bytes_allocation_size;
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 || WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 5
   uint32_t* shadow_bytes;
 #else
