@@ -40,41 +40,38 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
   if (UNLIKELY(offset + (uint64_t)len > mem->size)) \
     TRAP(OOB);
 
-#define RANGE_CHECK_ASM(mem, offset, len)                                 \
-  do {                                                                    \
-    bool is_oob;                                                          \
-    uint64_t offset_plus_len = offset + len;                              \
-    uint64_t size = mem->size;                                            \
-    if (!__builtin_constant_p(offset)) {                                  \
-      asm(                                                                \
-        "cmpq %[offset_plus_len], %[size]\n"                              \
-        : "=@ccb" (is_oob)                                                \
-        : [offset_plus_len] "rm" (offset_plus_len), [size] "r" (size)     \
-        : "cc"                                                            \
-      );                                                                  \
-      if (UNLIKELY(is_oob))                                               \
-        TRAP(OOB);                                                        \
-    }                                                                     \
-  } while(0)
+#define RANGE_CHECK_ASM(mem, offset, len)                             \
+  do {                                                                \
+    bool is_oob;                                                      \
+    uint64_t offset_plus_len = offset + len;                          \
+    uint64_t size = mem->size;                                        \
+    if (!__builtin_constant_p(offset)) {                              \
+      asm("cmpq %[offset_plus_len], %[size]\n"                        \
+          : "=@ccb"(is_oob)                                           \
+          : [offset_plus_len] "rm"(offset_plus_len), [size] "r"(size) \
+          : "cc");                                                    \
+      if (UNLIKELY(is_oob))                                           \
+        TRAP(OOB);                                                    \
+    }                                                                 \
+  } while (0)
 
-#define RANGE_CHECK_ASM_MASKED(mem, offset, len)                                          \
-  do {                                                                                    \
-    uint64_t zero = 0;                                                                    \
-    bool is_oob;                                                                          \
-    uint64_t offset_plus_len = offset + len;                                              \
-    uint64_t size = mem->size;                                                            \
-    if (!__builtin_constant_p(offset)) {                                                  \
-      asm (                                                                               \
-        "cmpq %[offset_plus_len], %[size]\n"                                              \
-        "cmovbq %[zero], %0\n"                                                            \
-        : "+r" (offset), "=@ccb" (is_oob)                                                 \
-        : [offset_plus_len] "rm" (offset_plus_len), [size] "r" (size), [zero] "rm" (zero) \
-        : "cc"                                                                            \
-      );                                                                                  \
-      if (UNLIKELY(is_oob))                                                               \
-        TRAP(OOB);                                                                        \
-    }                                                                                     \
-  } while(0)
+#define RANGE_CHECK_ASM_MASKED(mem, offset, len)                       \
+  do {                                                                 \
+    uint64_t zero = 0;                                                 \
+    bool is_oob;                                                       \
+    uint64_t offset_plus_len = offset + len;                           \
+    uint64_t size = mem->size;                                         \
+    if (!__builtin_constant_p(offset)) {                               \
+      asm("cmpq %[offset_plus_len], %[size]\n"                         \
+          "cmovbq %[zero], %0\n"                                       \
+          : "+r"(offset), "=@ccb"(is_oob)                              \
+          : [offset_plus_len] "rm"(offset_plus_len), [size] "r"(size), \
+            [zero] "rm"(zero)                                          \
+          : "cc");                                                     \
+      if (UNLIKELY(is_oob))                                            \
+        TRAP(OOB);                                                     \
+    }                                                                  \
+  } while (0)
 #endif
 
 #ifdef __GNUC__
@@ -108,9 +105,9 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 2 && !WASM_RT_SPECTREMASK
 #define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, (a >> 16) << 12))
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 1 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u8, a >> 4))? 0 : a
+#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u8, a >> 4)) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 2 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u8, (a >> 16) << 12))? 0 : a
+#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u8, (a >> 16) << 12)) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 3
 #define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, a >> 4) = 0
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
@@ -122,9 +119,9 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 2 && !WASM_RT_SPECTREMASK
 #define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[(a >> 16) << 12])
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 1 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) a = (mem->shadow_memory[a >> 4])? 0 : a
+#define MEMCHECK(mem, a, t) a = (mem->shadow_memory[a >> 4]) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 2 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) a = (mem->shadow_memory[(a >> 16) << 12])? 0 : a
+#define MEMCHECK(mem, a, t) a = (mem->shadow_memory[(a >> 16) << 12]) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 3
 #define MEMCHECK(mem, a, t) mem->shadow_memory[a >> 4] = 0
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
@@ -136,79 +133,55 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 
 #if WASM_RT_USE_SHADOW_SEGUE
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 && !WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  FORCE_READ_INT(WASM_RT_GS_REF(u32, a >> 32))
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u32, a >> 32))
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2 && !WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 32))
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 32))
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 3 && !WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 16))
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 16))
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 4 && !WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 24))
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 24))
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  a = (WASM_RT_GS_REF(u32, a >> 32))? 0 : a
+#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u32, a >> 32)) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  a = (WASM_RT_GS_REF(u8, a >> 32))? 0 : a
+#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u8, a >> 32)) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 3 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  a = (WASM_RT_GS_REF(u8, a >> 16))? 0 : a
+#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u8, a >> 16)) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 4 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  a = (WASM_RT_GS_REF(u8, a >> 24))? 0 : a
+#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u8, a >> 24)) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 5
-#define MEMCHECK(mem, a, t) \
-  WASM_RT_GS_REF(u32, a >> 32) = 0
+#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u32, a >> 32) = 0
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 6
-#define MEMCHECK(mem, a, t) \
-  WASM_RT_GS_REF(u8, a >> 32) = 0
+#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, a >> 32) = 0
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 7
-#define MEMCHECK(mem, a, t) \
-  WASM_RT_GS_REF(u8, a >> 16) = 0
+#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, a >> 16) = 0
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 8
-#define MEMCHECK(mem, a, t) \
-  WASM_RT_GS_REF(u8, a >> 24) = 0
+#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, a >> 24) = 0
 #endif
 #else
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 && !WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  FORCE_READ_INT(mem->shadow_bytes[a >> 32])
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_bytes[a >> 32])
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2 && !WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  FORCE_READ_INT(mem->shadow_bytes[a >> 32])
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_bytes[a >> 32])
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 3 && !WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  FORCE_READ_INT(mem->shadow_bytes[a >> 16])
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_bytes[a >> 16])
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 4 && !WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  FORCE_READ_INT(mem->shadow_bytes[a >> 24])
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_bytes[a >> 24])
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  a = (mem->shadow_bytes[a >> 32])? 0 : a
+#define MEMCHECK(mem, a, t) a = (mem->shadow_bytes[a >> 32]) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  a = (mem->shadow_bytes[a >> 32])? 0 : a
+#define MEMCHECK(mem, a, t) a = (mem->shadow_bytes[a >> 32]) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 3 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  a = (mem->shadow_bytes[a >> 16])? 0 : a
+#define MEMCHECK(mem, a, t) a = (mem->shadow_bytes[a >> 16]) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 4 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) \
-  a = (mem->shadow_bytes[a >> 24])? 0 : a
+#define MEMCHECK(mem, a, t) a = (mem->shadow_bytes[a >> 24]) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 5
-#define MEMCHECK(mem, a, t) \
-  mem->shadow_bytes[a >> 32] = 0
+#define MEMCHECK(mem, a, t) mem->shadow_bytes[a >> 32] = 0
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 6
-#define MEMCHECK(mem, a, t) \
-  mem->shadow_bytes[a >> 32] = 0
+#define MEMCHECK(mem, a, t) mem->shadow_bytes[a >> 32] = 0
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 7
-#define MEMCHECK(mem, a, t) \
-  mem->shadow_bytes[a >> 16] = 0
+#define MEMCHECK(mem, a, t) mem->shadow_bytes[a >> 16] = 0
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 8
-#define MEMCHECK(mem, a, t) \
-  mem->shadow_bytes[a >> 24] = 0
+#define MEMCHECK(mem, a, t) mem->shadow_bytes[a >> 24] = 0
 #endif
 #endif
 
