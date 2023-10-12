@@ -129,7 +129,7 @@ R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, a >
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 2
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, (a >> 16) << 4))
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, (a >> 16) << 12))
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 3
 )w2c_template"
@@ -137,7 +137,7 @@ R"w2c_template(#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, a >> 4) = 0
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, (a >> 16) << 4) = 0
+R"w2c_template(#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, (a >> 16) << 12) = 0
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
@@ -149,7 +149,7 @@ R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[a >
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 2
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[(a >> 16) << 4])
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->shadow_memory[(a >> 16) << 12])
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 3
 )w2c_template"
@@ -157,7 +157,7 @@ R"w2c_template(#define MEMCHECK(mem, a, t) mem->shadow_memory[a >> 4] = 0
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) mem->shadow_memory[(a >> 16) << 4] = 0
+R"w2c_template(#define MEMCHECK(mem, a, t) mem->shadow_memory[(a >> 16) << 12] = 0
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
