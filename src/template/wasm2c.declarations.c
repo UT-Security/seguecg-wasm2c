@@ -40,6 +40,19 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
   if (UNLIKELY(offset + (uint64_t)len > mem->size)) \
     TRAP(OOB);
 
+#define RANGE_CHECK_MASKED(mem, offset, len)           \
+  do {                                                 \
+  uint8_t is_oob = offset + (uint64_t)len > mem->size; \
+  uint64_t zero = -1;                                   \
+  if (UNLIKELY(is_oob))                                \
+    TRAP(OOB);                                         \
+  asm("test %[is_oob],%[is_oob]\n"                    \
+      "cmovne %[zero], %[offset_var]\n"                \
+      : [offset_var] "+r"(offset)                      \
+      : [is_oob] "r"(is_oob), [zero] "r"(zero)         \
+      : "cc");                                         \
+  } while(0)
+
 #define RANGE_CHECK_ASM(mem, offset, len)                             \
   do {                                                                \
     bool is_oob;                                                      \
@@ -201,8 +214,14 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #define MEMCHECK(mem, a, t) RANGE_CHECK_ASM(mem, a, sizeof(t))
 #endif
 
+#elif WASM_RT_MEMCHECK_BOUNDS_CHECK
+
+#if WASM_RT_SPECTREMASK
+#define MEMCHECK(mem, a, t) RANGE_CHECK_MASKED(mem, a, sizeof(t))
 #else
 #define MEMCHECK(mem, a, t) RANGE_CHECK(mem, a, sizeof(t))
+#endif
+
 #endif
 
 #ifdef WASM_RT_NOINLINE
