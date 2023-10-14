@@ -73,29 +73,29 @@ R"w2c_template(  if (UNLIKELY(offset + (uint64_t)len > mem->size)) \
 R"w2c_template(    TRAP(OOB);
 )w2c_template"
 R"w2c_template(
-#define RANGE_CHECK_MASKED(mem, offset, len)           \
+#define RANGE_CHECK_MASKED(mem, offset, len)             \
 )w2c_template"
-R"w2c_template(  do {                                                 \
+R"w2c_template(  do {                                                   \
 )w2c_template"
-R"w2c_template(  uint8_t is_oob = offset + (uint64_t)len > mem->size; \
+R"w2c_template(    uint8_t is_oob = offset + (uint64_t)len > mem->size; \
 )w2c_template"
-R"w2c_template(  uint64_t zero = -1;                                   \
+R"w2c_template(    uint64_t zero = -1;                                  \
 )w2c_template"
-R"w2c_template(  if (UNLIKELY(is_oob))                                \
+R"w2c_template(    if (UNLIKELY(is_oob))                                \
 )w2c_template"
-R"w2c_template(    TRAP(OOB);                                         \
+R"w2c_template(      TRAP(OOB);                                         \
 )w2c_template"
-R"w2c_template(  asm("test %[is_oob],%[is_oob]\n"                    \
+R"w2c_template(    asm("test %[is_oob],%[is_oob]\n"                     \
 )w2c_template"
-R"w2c_template(      "cmovne %[zero], %[offset_var]\n"                \
+R"w2c_template(        "cmovne %[zero], %[offset_var]\n"                \
 )w2c_template"
-R"w2c_template(      : [offset_var] "+r"(offset)                      \
+R"w2c_template(        : [offset_var] "+r"(offset)                      \
 )w2c_template"
-R"w2c_template(      : [is_oob] "r"(is_oob), [zero] "r"(zero)         \
+R"w2c_template(        : [is_oob] "r"(is_oob), [zero] "r"(zero)         \
 )w2c_template"
-R"w2c_template(      : "cc");                                         \
+R"w2c_template(        : "cc");                                         \
 )w2c_template"
-R"w2c_template(  } while(0)
+R"w2c_template(  } while (0)
 )w2c_template"
 R"w2c_template(
 #define RANGE_CHECK_ASM(mem, offset, len)                             \
