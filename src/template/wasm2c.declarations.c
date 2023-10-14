@@ -102,7 +102,6 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #endif
 
 #define WASM_RT_GS_REF(TYPE, ptr) (*((TYPE __seg_gs*)(uintptr_t)(ptr)))
-#define WASM_RT_GS_REF_U32(TYPE, ptr) (*((TYPE __seg_gs*)(uint32_t)(ptr)))
 
 #if WASM_RT_MEMCHECK_GUARD_PAGES
 #define MEMCHECK(mem, a, t)
@@ -149,7 +148,7 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 && !WASM_RT_SPECTREMASK
 #define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u32, (a >> 32) << 2))
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2 && !WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF_U32(u8, a >> 32))
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 32))
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 3 && !WASM_RT_SPECTREMASK
 #define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 16))
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 4 && !WASM_RT_SPECTREMASK
@@ -157,7 +156,7 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 && WASM_RT_SPECTREMASK
 #define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u32, (a >> 32) << 2)) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2 && WASM_RT_SPECTREMASK
-#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF_U32(u8, a >> 32)) ? 0 : a
+#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u8, a >> 32)) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 3 && WASM_RT_SPECTREMASK
 #define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u8, a >> 16)) ? 0 : a
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 4 && WASM_RT_SPECTREMASK
@@ -165,7 +164,7 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 5
 #define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u32, (a >> 32) << 2) = 0
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 6
-#define MEMCHECK(mem, a, t) WASM_RT_GS_REF_U32(u8, a >> 32) = 0
+#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, a >> 32) = 0
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 7
 #define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, a >> 16) = 0
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 8
@@ -197,6 +196,28 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 8
 #define MEMCHECK(mem, a, t) mem->shadow_bytes[a >> 24] = 0
 #endif
+#endif
+
+#elif WASM_RT_MEMCHECK_PRESHADOW_BYTES
+
+#if WASM_RT_USE_SHADOW_SEGUE && !WASM_RT_SPECTREMASK
+#define MEMCHECK(mem, a, t)      \
+  FORCE_READ_INT(WASM_RT_GS_REF( \
+      u8, -mem->shadow_bytes_distance_from_heap + (u32)(a >> 32)))
+#elif WASM_RT_USE_SHADOW_SEGUE && WASM_RT_SPECTREMASK
+#define MEMCHECK(mem, a, t)                                                    \
+  a = (WASM_RT_GS_REF(u8,                                                      \
+                      -mem->shadow_bytes_distance_from_heap + (u32)(a >> 32))) \
+          ? 0                                                                  \
+          : a
+#elif !WASM_RT_USE_SHADOW_SEGUE && !WASM_RT_SPECTREMASK
+#define MEMCHECK(mem, a, t) \
+  FORCE_READ_INT(           \
+      mem->data[-mem->shadow_bytes_distance_from_heap + (u32)(a >> 32)])
+#elif !WASM_RT_USE_SHADOW_SEGUE && WASM_RT_SPECTREMASK
+#define MEMCHECK(mem, a, t)                                                   \
+  a = (mem->data[-mem->shadow_bytes_distance_from_heap + (u32)(a >> 32)]) ? 0 \
+                                                                          : a
 #endif
 
 #elif WASM_RT_MEMCHECK_DEBUG_WATCH

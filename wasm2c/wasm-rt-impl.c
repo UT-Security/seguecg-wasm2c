@@ -299,6 +299,8 @@ static uint64_t get_allocation_size_for_mmap(wasm_rt_memory_t* memory) {
 
 #endif
 
+#if WASM_RT_MEMCHECK_SHADOW_BYTES || WASM_RT_MEMCHECK_PRESHADOW_BYTES
+
 static uint64_t div_and_roundup(size_t numerator, size_t denominator) {
   if (numerator == 0) {
     return 1;
@@ -308,10 +310,9 @@ static uint64_t div_and_roundup(size_t numerator, size_t denominator) {
   return pages;
 }
 
-#if WASM_RT_MEMCHECK_SHADOW_BYTES
-
 static size_t get_required_shadow_bytes(size_t pages) {
-#if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 || \
+#if WASM_RT_MEMCHECK_PRESHADOW_BYTES ||          \
+    WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 || \
     WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2 || \
     WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 5 || \
     WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 6
@@ -333,13 +334,13 @@ static size_t get_required_shadow_bytes(size_t pages) {
   return ret;
 }
 
-static void* get_shadow_bytes_pointer(char* shadow_bytes_allocation,
+static void* get_shadow_bytes_pointer(uint8_t* shadow_bytes_allocation,
                                       size_t shadow_bytes_allocation_size,
                                       uint64_t pages) {
   const size_t accessible_size = shadow_bytes_allocation_size / 2;
-  char* inaccessible_shadow_ptr = shadow_bytes_allocation + accessible_size;
+  uint8_t* inaccessible_shadow_ptr = shadow_bytes_allocation + accessible_size;
   size_t accessible_shadow_bytes = get_required_shadow_bytes(pages);
-  char* shadow_ptr = inaccessible_shadow_ptr - accessible_shadow_bytes;
+  uint8_t* shadow_ptr = inaccessible_shadow_ptr - accessible_shadow_bytes;
   return shadow_ptr;
 }
 
@@ -356,23 +357,56 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   memory->is64 = is64;
 
 #if WASM_RT_USE_MMAP
+
+#if WASM_RT_MEMCHECK_PRESHADOW_BYTES
+  const size_t required_shadow_memory =
+      get_required_shadow_bytes(memory->max_pages);
+  const uint64_t nearest_page_count =
+      div_and_roundup(required_shadow_memory, OSPAGE_SIZE);
+  // create a memory allocation of "nearest_page_count" of accessible pages
+  // followed by "nearest_page_count" of inaccessible pages
+  const uint64_t disallowed_and_allowed_pages = nearest_page_count * 2;
+  const uint64_t pre_shadow_bytes = disallowed_and_allowed_pages * OSPAGE_SIZE;
+#else
+  const uint64_t pre_shadow_bytes = 0;
+#endif
+
   const uint64_t mmap_size = get_allocation_size_for_mmap(memory);
-  void* addr = os_mmap(mmap_size);
+  void* addr = os_mmap(pre_shadow_bytes + mmap_size);
   if (!addr) {
     os_print_last_error("os_mmap failed.");
     abort();
   }
+#if WASM_RT_MEMCHECK_PRESHADOW_BYTES
+  memory->shadow_bytes_allocation = addr;
+  memory->shadow_bytes_allocation_size = pre_shadow_bytes;
+  int ret_shadow = os_mprotect(addr, pre_shadow_bytes / 2);
+  if (ret_shadow != 0) {
+    os_print_last_error("os_mprotect preshadow failed.");
+    abort();
+  }
+#endif
+  addr = ((uint8_t*)addr) + pre_shadow_bytes;
   int ret = os_mprotect(addr, byte_length);
   if (ret != 0) {
     os_print_last_error("os_mprotect failed.");
     abort();
   }
   memory->data = addr;
+
+#if WASM_RT_MEMCHECK_PRESHADOW_BYTES
+  memory->shadow_bytes = get_shadow_bytes_pointer(
+      memory->shadow_bytes_allocation, memory->shadow_bytes_allocation_size,
+      initial_pages);
+  memory->shadow_bytes_distance_from_heap = memory->data - memory->shadow_bytes;
+#endif
+
 #else
   memory->data = calloc(byte_length, 1);
 #endif
 
-#if WASM_RT_USE_SEGUE
+#if WASM_RT_USE_SEGUE || \
+    (WASM_RT_MEMCHECK_PRESHADOW_BYTES && WASM_RT_USE_SHADOW_SEGUE)
   _writegsbase_u64((uintptr_t)memory->data);
 #endif
 
@@ -504,6 +538,12 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
 #if WASM_RT_USE_SHADOW_SEGUE
   _writegsbase_u64((uintptr_t)memory->shadow_bytes);
 #endif
+
+#elif WASM_RT_MEMCHECK_PRESHADOW_BYTES
+  memory->shadow_bytes =
+      get_shadow_bytes_pointer(memory->shadow_bytes_allocation,
+                               memory->shadow_bytes_allocation_size, new_pages);
+  memory->shadow_bytes_distance_from_heap = memory->data - memory->shadow_bytes;
 #endif
 
   // if WASM_RT_MEMCHECK_DEBUG_WATCH adjust debug watch
@@ -530,8 +570,17 @@ uint64_t wasm_rt_grow_memory(wasm_rt_memory_t* memory, uint64_t delta) {
 
 void wasm_rt_free_memory(wasm_rt_memory_t* memory) {
 #if WASM_RT_USE_MMAP
+
+#if WASM_RT_MEMCHECK_PRESHADOW_BYTES
+  void* addr = memory->shadow_bytes_allocation;
+  const uint64_t pre_shadow_bytes = memory->shadow_bytes_allocation_size;
+#else
+  void* addr = memory->data;
+  const uint64_t pre_shadow_bytes = 0;
+#endif
+
   const uint64_t mmap_size = get_allocation_size_for_mmap(memory);
-  os_munmap(memory->data, mmap_size);  // ignore error
+  os_munmap(addr, pre_shadow_bytes + mmap_size);  // ignore error
 #else
   free(memory->data);
 #endif

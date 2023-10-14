@@ -193,8 +193,6 @@ R"w2c_template(#endif
 R"w2c_template(
 #define WASM_RT_GS_REF(TYPE, ptr) (*((TYPE __seg_gs*)(uintptr_t)(ptr)))
 )w2c_template"
-R"w2c_template(#define WASM_RT_GS_REF_U32(TYPE, ptr) (*((TYPE __seg_gs*)(uint32_t)(ptr)))
-)w2c_template"
 R"w2c_template(
 #if WASM_RT_MEMCHECK_GUARD_PAGES
 )w2c_template"
@@ -282,7 +280,7 @@ R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u32, (a
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2 && !WASM_RT_SPECTREMASK
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF_U32(u8, a >> 32))
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, a >> 32))
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 3 && !WASM_RT_SPECTREMASK
 )w2c_template"
@@ -298,7 +296,7 @@ R"w2c_template(#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u32, (a >> 32) <<
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 2 && WASM_RT_SPECTREMASK
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF_U32(u8, a >> 32)) ? 0 : a
+R"w2c_template(#define MEMCHECK(mem, a, t) a = (WASM_RT_GS_REF(u8, a >> 32)) ? 0 : a
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 3 && WASM_RT_SPECTREMASK
 )w2c_template"
@@ -314,7 +312,7 @@ R"w2c_template(#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u32, (a >> 32) << 2) =
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 6
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) WASM_RT_GS_REF_U32(u8, a >> 32) = 0
+R"w2c_template(#define MEMCHECK(mem, a, t) WASM_RT_GS_REF(u8, a >> 32) = 0
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 7
 )w2c_template"
@@ -377,6 +375,48 @@ R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 8
 R"w2c_template(#define MEMCHECK(mem, a, t) mem->shadow_bytes[a >> 24] = 0
 )w2c_template"
 R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
+#elif WASM_RT_MEMCHECK_PRESHADOW_BYTES
+)w2c_template"
+R"w2c_template(
+#if WASM_RT_USE_SHADOW_SEGUE && !WASM_RT_SPECTREMASK
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t)      \
+)w2c_template"
+R"w2c_template(  FORCE_READ_INT(WASM_RT_GS_REF( \
+)w2c_template"
+R"w2c_template(      u8, -mem->shadow_bytes_distance_from_heap + (u32)(a >> 32)))
+)w2c_template"
+R"w2c_template(#elif WASM_RT_USE_SHADOW_SEGUE && WASM_RT_SPECTREMASK
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t)                                                    \
+)w2c_template"
+R"w2c_template(  a = (WASM_RT_GS_REF(u8,                                                      \
+)w2c_template"
+R"w2c_template(                      -mem->shadow_bytes_distance_from_heap + (u32)(a >> 32))) \
+)w2c_template"
+R"w2c_template(          ? 0                                                                  \
+)w2c_template"
+R"w2c_template(          : a
+)w2c_template"
+R"w2c_template(#elif !WASM_RT_USE_SHADOW_SEGUE && !WASM_RT_SPECTREMASK
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) \
+)w2c_template"
+R"w2c_template(  FORCE_READ_INT(           \
+)w2c_template"
+R"w2c_template(      mem->data[-mem->shadow_bytes_distance_from_heap + (u32)(a >> 32)])
+)w2c_template"
+R"w2c_template(#elif !WASM_RT_USE_SHADOW_SEGUE && WASM_RT_SPECTREMASK
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t)                                                   \
+)w2c_template"
+R"w2c_template(  a = (mem->data[-mem->shadow_bytes_distance_from_heap + (u32)(a >> 32)]) ? 0 \
+)w2c_template"
+R"w2c_template(                                                                          : a
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"

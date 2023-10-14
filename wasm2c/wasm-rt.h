@@ -127,6 +127,7 @@ extern "C" {
     !defined(WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM) && \
     !defined(WASM_RT_MEMCHECK_SHADOW_PAGE) &&      \
     !defined(WASM_RT_MEMCHECK_SHADOW_BYTES) &&     \
+    !defined(WASM_RT_MEMCHECK_PRESHADOW_BYTES) &&  \
     !defined(WASM_RT_MEMCHECK_DEBUG_WATCH)
 #if WASM_RT_GUARD_PAGES_SUPPORTED
 #define WASM_RT_MEMCHECK_GUARD_PAGES 1
@@ -150,6 +151,9 @@ extern "C" {
 #endif
 #ifndef WASM_RT_MEMCHECK_SHADOW_BYTES
 #define WASM_RT_MEMCHECK_SHADOW_BYTES 0
+#endif
+#ifndef WASM_RT_MEMCHECK_PRESHADOW_BYTES
+#define WASM_RT_MEMCHECK_PRESHADOW_BYTES 0
 #endif
 #ifndef WASM_RT_MEMCHECK_DEBUG_WATCH
 #define WASM_RT_MEMCHECK_DEBUG_WATCH 0
@@ -183,11 +187,13 @@ extern "C" {
 
 #if (WASM_RT_MEMCHECK_GUARD_PAGES + WASM_RT_MEMCHECK_BOUNDS_CHECK +     \
      WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM + WASM_RT_MEMCHECK_SHADOW_PAGE + \
-     WASM_RT_MEMCHECK_SHADOW_BYTES + WASM_RT_MEMCHECK_DEBUG_WATCH) > 1
+     WASM_RT_MEMCHECK_SHADOW_BYTES + WASM_RT_MEMCHECK_PRESHADOW_BYTES + \
+     WASM_RT_MEMCHECK_DEBUG_WATCH) > 1
 #error "Cannot use multiple memcheck schemes"
 #elif (WASM_RT_MEMCHECK_GUARD_PAGES + WASM_RT_MEMCHECK_BOUNDS_CHECK +     \
        WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM + WASM_RT_MEMCHECK_SHADOW_PAGE + \
-       WASM_RT_MEMCHECK_SHADOW_BYTES + WASM_RT_MEMCHECK_DEBUG_WATCH) == 0
+       WASM_RT_MEMCHECK_SHADOW_BYTES + WASM_RT_MEMCHECK_PRESHADOW_BYTES + \
+       WASM_RT_MEMCHECK_DEBUG_WATCH) == 0
 #error "Must choose at least one memcheck scheme"
 #endif
 
@@ -332,7 +338,7 @@ typedef struct {
 #endif
 #if WASM_RT_MEMCHECK_SHADOW_BYTES
   /** Pointer to shadow bytes*/
-  char* shadow_bytes_allocation;
+  uint8_t* shadow_bytes_allocation;
   size_t shadow_bytes_allocation_size;
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 1 || \
     WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 5
@@ -340,6 +346,13 @@ typedef struct {
 #else
   uint8_t* shadow_bytes;
 #endif
+#endif
+#if WASM_RT_MEMCHECK_PRESHADOW_BYTES
+  /** Pointer to shadow bytes*/
+  uint8_t* shadow_bytes_allocation;
+  size_t shadow_bytes_allocation_size;
+  uint8_t* shadow_bytes;
+  uint64_t shadow_bytes_distance_from_heap;
 #endif
 #if WASM_RT_MEMCHECK_DEBUG_WATCH
   uint64_t debug_watch_buffer;
