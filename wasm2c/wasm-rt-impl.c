@@ -40,10 +40,6 @@
 #include <immintrin.h>
 #endif
 
-#if WASM_RT_MEMCHECK_MPX
-#include <sys/prctl.h>
-#endif
-
 #define PAGE_SIZE 65536
 #define OSPAGE_SIZE 4096
 
@@ -420,12 +416,6 @@ static bool enable_manual_mpx()
     xsave_buf->bndcsr.status_reg = 0;
 
     mpx_xrstor_state(xsave_buf, 0x10);
-
-    if (prctl(43, 0, 0, 0, 0))
-    {
-        printf("prctl failed\n");
-        return false;
-    }
 
     return true;
 }
