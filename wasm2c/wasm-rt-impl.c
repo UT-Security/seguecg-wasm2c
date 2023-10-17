@@ -40,6 +40,10 @@
 #include <immintrin.h>
 #endif
 
+#if WASM_RT_MEMCHECK_MPX
+#include <sys/prctl.h>
+#endif
+
 #define PAGE_SIZE 65536
 #define OSPAGE_SIZE 4096
 
@@ -346,6 +350,98 @@ static void* get_shadow_bytes_pointer(uint8_t* shadow_bytes_allocation,
 
 #endif
 
+#if WASM_RT_MEMCHECK_MPX
+
+struct mpx_xsave_hdr_struct
+{
+    uint64_t xstate_bv;
+    uint64_t reserved1[2];
+    uint64_t reserved2[5];
+} __attribute__((packed));
+
+struct mpx_bndregs_struct
+{
+    uint64_t bndregs[8];
+} __attribute__((packed));
+
+struct mpx_bndcsr_struct
+{
+    uint64_t cfg_reg_u;
+    uint64_t status_reg;
+} __attribute__((packed));
+
+struct mpx_xsave_struct
+{
+    uint8_t fpu_sse[512];
+    struct mpx_xsave_hdr_struct xsave_hdr;
+    uint8_t ymm[256];
+    uint8_t lwp[128];
+    struct mpx_bndregs_struct bndregs;
+    struct mpx_bndcsr_struct bndcsr;
+} __attribute__((packed));
+
+static inline void mpx_xrstor_state(struct mpx_xsave_struct *fx, uint64_t mask)
+{
+    uint32_t lmask = mask;
+    uint32_t hmask = mask >> 32;
+
+#ifdef __i386__
+#define REX_PREFIX
+#else /* __i386__ */
+#define REX_PREFIX "0x48, "
+#endif
+
+    asm volatile(".byte " REX_PREFIX "0x0f,0xae,0x2f\n\t"
+                 : : "D"(fx), "m"(*fx), "a"(lmask), "d"(hmask)
+                 : "memory");
+#undef REX_PREFIX
+}
+
+static bool enable_manual_mpx()
+{
+    uint8_t __attribute__((__aligned__(64))) buffer[4096];
+    struct mpx_xsave_struct *xsave_buf = (struct mpx_xsave_struct *)buffer;
+
+    memset(buffer, 0, sizeof(buffer));
+    mpx_xrstor_state(xsave_buf, 0x18);
+
+    /* Enable MPX.  */
+    xsave_buf->xsave_hdr.xstate_bv = 0x10;
+    xsave_buf->bndcsr.cfg_reg_u = 0; // no spill region needed
+
+    const int MPX_ENABLE_BIT_NO = 0;
+    const int BNDPRESERVE_BIT_NO = 1;
+
+    const int bndpreserve = 1; // don't overwrite bounds during ext lib calls
+    const int enable = 1;
+
+    xsave_buf->bndcsr.cfg_reg_u |= enable << MPX_ENABLE_BIT_NO;
+    xsave_buf->bndcsr.cfg_reg_u |= bndpreserve << BNDPRESERVE_BIT_NO;
+    xsave_buf->bndcsr.status_reg = 0;
+
+    mpx_xrstor_state(xsave_buf, 0x10);
+
+    if (prctl(43, 0, 0, 0, 0))
+    {
+        printf("prctl failed\n");
+        return false;
+    }
+
+    return true;
+}
+
+static void set_manual_mpx_bound(uint64_t bound) {
+  const uint64_t lower = 0;
+
+  asm volatile(
+    "bndmk (%[lower], %[bound]), %%bnd1\n"
+    :
+    : [lower] "r"(lower), [bound] "r"(bound)
+    :);
+}
+
+#endif
+
 void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
                              uint64_t initial_pages,
                              uint64_t max_pages,
@@ -484,6 +580,11 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   _writegsbase_u64((uintptr_t) & (memory->debug_watch_buffer));
 #endif
 #endif
+
+#if WASM_RT_MEMCHECK_MPX
+  enable_manual_mpx();
+  set_manual_mpx_bound(memory->size);
+#endif
 }
 
 static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
@@ -552,6 +653,12 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
   memmove(new_data + new_size - old_size, new_data, old_size);
   memset(new_data, 0, delta_size);
 #endif
+
+#if WASM_RT_MEMCHECK_MPX
+  enable_manual_mpx();
+  set_manual_mpx_bound(new_size);
+#endif
+
   memory->pages = new_pages;
   memory->size = new_size;
   memory->data = new_data;

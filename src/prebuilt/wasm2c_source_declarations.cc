@@ -435,6 +435,22 @@ R"w2c_template(#define MEMCHECK(mem, a, t) mem->debug_watch_buffer = a
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(
+#elif WASM_RT_MEMCHECK_MPX
+)w2c_template"
+R"w2c_template(
+#define MEMCHECK(mem, a, t)           \
+)w2c_template"
+R"w2c_template(    asm volatile(                     \
+)w2c_template"
+R"w2c_template(        "bndcu %[addr_val], %%bnd1\n" \
+)w2c_template"
+R"w2c_template(        :                             \
+)w2c_template"
+R"w2c_template(        : [addr_val] "r"(a)           \
+)w2c_template"
+R"w2c_template(        :)
+)w2c_template"
+R"w2c_template(
 #elif WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM
 )w2c_template"
 R"w2c_template(

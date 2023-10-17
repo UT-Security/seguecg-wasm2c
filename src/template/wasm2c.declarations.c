@@ -228,6 +228,15 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #define MEMCHECK(mem, a, t) mem->debug_watch_buffer = a
 #endif
 
+#elif WASM_RT_MEMCHECK_MPX
+
+#define MEMCHECK(mem, a, t)           \
+    asm volatile(                     \
+        "bndcu %[addr_val], %%bnd1\n" \
+        :                             \
+        : [addr_val] "r"(a)           \
+        :)
+
 #elif WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM
 
 #if WASM_RT_SPECTREMASK
