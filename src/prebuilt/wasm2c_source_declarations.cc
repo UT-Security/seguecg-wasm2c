@@ -269,6 +269,35 @@ R"w2c_template(#endif
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_TAG
+)w2c_template"
+R"w2c_template(  bool floatzone_y_init_done = false;
+)w2c_template"
+R"w2c_template(  float floatzone_y;
+)w2c_template"
+R"w2c_template(#if WASM_RT_USE_SHADOW_SEGUE
+)w2c_template"
+R"w2c_template(
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_FLOAT(WASM_RT_GS_REF(float, a >> 32) + floatzone_y)
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
+#else
+)w2c_template"
+R"w2c_template(
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_FLOAT(mem->shadow_bytes[(u32)(a >> 32)] + floatzone_y)
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
+#endif
+)w2c_template"
+R"w2c_template(
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES
 )w2c_template"
 R"w2c_template(
@@ -537,6 +566,25 @@ R"w2c_template(MEMCPY_GS(f64);
 )w2c_template"
 R"w2c_template(
 #endif
+)w2c_template"
+R"w2c_template(
+static void init_memchk() {
+)w2c_template"
+R"w2c_template(#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG
+)w2c_template"
+R"w2c_template(  if (!floatzone_y_init_done) {
+)w2c_template"
+R"w2c_template(    uint32_t crash_value_int = 0x8b8b8b8b;
+)w2c_template"
+R"w2c_template(    memcpy(&floatzone_y, &crash_value_int, sizeof(float));
+)w2c_template"
+R"w2c_template(    floatzone_y_init_done = true;
+)w2c_template"
+R"w2c_template(  }
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(}
 )w2c_template"
 R"w2c_template(
 #if WABT_BIG_ENDIAN

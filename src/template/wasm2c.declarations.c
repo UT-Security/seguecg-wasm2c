@@ -142,6 +142,23 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #endif
 #endif
 
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_TAG
+  bool floatzone_y_init_done = false;
+  float floatzone_y;
+#if WASM_RT_USE_SHADOW_SEGUE
+
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1
+#define MEMCHECK(mem, a, t) FORCE_READ_FLOAT(WASM_RT_GS_REF(float, a >> 32) + floatzone_y)
+#endif
+
+#else
+
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1
+#define MEMCHECK(mem, a, t) FORCE_READ_FLOAT(mem->shadow_bytes[(u32)(a >> 32)] + floatzone_y)
+#endif
+
+#endif
+
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES
 
 #if WASM_RT_USE_SHADOW_SEGUE
@@ -285,6 +302,16 @@ MEMCPY_GS(f32);
 MEMCPY_GS(f64);
 
 #endif
+
+static void init_memchk() {
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG
+  if (!floatzone_y_init_done) {
+    uint32_t crash_value_int = 0x8b8b8b8b;
+    memcpy(&floatzone_y, &crash_value_int, sizeof(float));
+    floatzone_y_init_done = true;
+  }
+#endif
+}
 
 #if WABT_BIG_ENDIAN
 #error "Big endian not supported"
