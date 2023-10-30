@@ -149,12 +149,26 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1
 #define MEMCHECK(mem, a, t) FORCE_READ_FLOAT(WASM_RT_GS_REF(float, a >> 32) + floatzone_y)
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 2
+#define MEMCHECK(mem, a, t) asm("addss  %%gs:0x0,%%xmm15\n" \
+        :                                                 \
+        :                                                 \
+        : "xmm15");
 #endif
 
 #else
 
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1
 #define MEMCHECK(mem, a, t) FORCE_READ_FLOAT(mem->shadow_bytes[(u32)(a >> 32)] + floatzone_y)
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 2
+#define MEMCHECK(mem, a, t)                                  \
+do {                                                         \
+float* tag_ptr = &mem->shadow_bytes[(u32)(a >> 32)];         \
+asm("addss  %[tag_ptr],%%xmm15\n"                             \
+        :                                                    \
+        :  [tag_ptr] "m"(tag_ptr)                            \
+        : "xmm15");                                          \
+} while(0)
 #endif
 
 #endif

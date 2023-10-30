@@ -535,7 +535,7 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
 
   const size_t accessible_bytes = get_required_shadow_bytes(memory->pages);
 
-#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1 || WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 2
   for(size_t i = accessible_bytes/sizeof(memory->shadow_bytes[0]); i < required_shadow_memory; i++) {
     uint32_t floatzone_x = 0x0b8b8b8a;
     memcpy(&(memory->shadow_bytes[i]), &floatzone_x, sizeof(floatzone_x));
@@ -652,7 +652,7 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
   const size_t old_accessible_index = old_accessible_bytes/sizeof(memory->shadow_bytes[0]);
   const size_t new_accessible_bytes = get_required_shadow_bytes(new_pages);
 
-#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1 || WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 2
   memset(&(memory->shadow_bytes[old_accessible_index]), 0, new_accessible_bytes - old_accessible_bytes);
 #endif
 

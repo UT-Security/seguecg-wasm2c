@@ -282,6 +282,16 @@ R"w2c_template(
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_FLOAT(WASM_RT_GS_REF(float, a >> 32) + floatzone_y)
 )w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 2
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) asm("addss  %%gs:0x0,%%xmm15\n" \
+)w2c_template"
+R"w2c_template(        :                                                 \
+)w2c_template"
+R"w2c_template(        :                                                 \
+)w2c_template"
+R"w2c_template(        : "xmm15");
+)w2c_template"
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(
@@ -291,6 +301,24 @@ R"w2c_template(
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 1
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_FLOAT(mem->shadow_bytes[(u32)(a >> 32)] + floatzone_y)
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_TAG_SCHEME == 2
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t)                                  \
+)w2c_template"
+R"w2c_template(do {                                                         \
+)w2c_template"
+R"w2c_template(float* tag_ptr = &mem->shadow_bytes[(u32)(a >> 32)];         \
+)w2c_template"
+R"w2c_template(asm("addss  %[tag_ptr],%%xmm15\n"                             \
+)w2c_template"
+R"w2c_template(        :                                                    \
+)w2c_template"
+R"w2c_template(        :  [tag_ptr] "m"(tag_ptr)                            \
+)w2c_template"
+R"w2c_template(        : "xmm15");                                          \
+)w2c_template"
+R"w2c_template(} while(0)
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
