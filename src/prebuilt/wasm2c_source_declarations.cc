@@ -98,6 +98,25 @@ R"w2c_template(        : "cc");                                         \
 R"w2c_template(  } while (0)
 )w2c_template"
 R"w2c_template(
+#if WASM_RT_MEMCHECK_BOUNDS_CHECK_TRAP_SCHEME == 1
+)w2c_template"
+R"w2c_template(#define RANGE_CHECK_TRAP(mem, offset, len)          \
+)w2c_template"
+R"w2c_template(  if (UNLIKELY(offset + (uint64_t)len > mem->size)) \
+)w2c_template"
+R"w2c_template(    offset = mem->size;
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_BOUNDS_CHECK_TRAP_SCHEME == 2
+)w2c_template"
+R"w2c_template(#define RANGE_CHECK_TRAP(mem, offset, len)          \
+)w2c_template"
+R"w2c_template(  if (UNLIKELY(offset + (uint64_t)len > mem->size)) \
+)w2c_template"
+R"w2c_template(    offset = -1;
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
 #define RANGE_CHECK_ASM(mem, offset, len)                             \
 )w2c_template"
 R"w2c_template(  do {                                                                \
@@ -518,6 +537,20 @@ R"w2c_template(#define MEMCHECK(mem, a, t) RANGE_CHECK_ASM_MASKED(mem, a, sizeof
 R"w2c_template(#else
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t) RANGE_CHECK_ASM(mem, a, sizeof(t))
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
+#elif WASM_RT_MEMCHECK_BOUNDS_CHECK_TRAP
+)w2c_template"
+R"w2c_template(
+#if WASM_RT_SPECTREMASK
+)w2c_template"
+R"w2c_template(#error "Not impl"
+)w2c_template"
+R"w2c_template(#else
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) RANGE_CHECK_TRAP(mem, a, sizeof(t))
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"

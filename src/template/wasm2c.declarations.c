@@ -53,6 +53,16 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
         : "cc");                                         \
   } while (0)
 
+#if WASM_RT_MEMCHECK_BOUNDS_CHECK_TRAP_SCHEME == 1
+#define RANGE_CHECK_TRAP(mem, offset, len)          \
+  if (UNLIKELY(offset + (uint64_t)len > mem->size)) \
+    offset = mem->size;
+#elif WASM_RT_MEMCHECK_BOUNDS_CHECK_TRAP_SCHEME == 2
+#define RANGE_CHECK_TRAP(mem, offset, len)          \
+  if (UNLIKELY(offset + (uint64_t)len > mem->size)) \
+    offset = -1;
+#endif
+
 #define RANGE_CHECK_ASM(mem, offset, len)                             \
   do {                                                                \
     bool is_oob;                                                      \
@@ -274,6 +284,14 @@ asm("addss  %[tag_ptr],%%xmm15\n"                             \
 #define MEMCHECK(mem, a, t) RANGE_CHECK_ASM_MASKED(mem, a, sizeof(t))
 #else
 #define MEMCHECK(mem, a, t) RANGE_CHECK_ASM(mem, a, sizeof(t))
+#endif
+
+#elif WASM_RT_MEMCHECK_BOUNDS_CHECK_TRAP
+
+#if WASM_RT_SPECTREMASK
+#error "Not impl"
+#else
+#define MEMCHECK(mem, a, t) RANGE_CHECK_TRAP(mem, a, sizeof(t))
 #endif
 
 #elif WASM_RT_MEMCHECK_BOUNDS_CHECK
