@@ -26,6 +26,13 @@ R"w2c_template(
 #define UNREACHABLE TRAP(UNREACHABLE)
 )w2c_template"
 R"w2c_template(
+#if WASM_RT_MEMCHECK_MASK_PDEP
+)w2c_template"
+R"w2c_template(#include <immintrin.h>
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
 static inline bool func_types_eq(const wasm_rt_func_type_t a,
 )w2c_template"
 R"w2c_template(                                 const wasm_rt_func_type_t b) {
@@ -525,6 +532,13 @@ R"w2c_template(        :                             \
 R"w2c_template(        : [addr_val] "r"(a)           \
 )w2c_template"
 R"w2c_template(        :)
+)w2c_template"
+R"w2c_template(
+#elif WASM_RT_MEMCHECK_MASK_PDEP
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t)           \
+)w2c_template"
+R"w2c_template(    a = a | _pdep_u64(a, mem->pdep_mask)
 )w2c_template"
 R"w2c_template(
 #elif WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM

@@ -15,6 +15,10 @@
 
 #define UNREACHABLE TRAP(UNREACHABLE)
 
+#if WASM_RT_MEMCHECK_MASK_PDEP
+#include <immintrin.h>
+#endif
+
 static inline bool func_types_eq(const wasm_rt_func_type_t a,
                                  const wasm_rt_func_type_t b) {
   return (a == b) || LIKELY(a && b && !memcmp(a, b, 32));
@@ -277,6 +281,10 @@ asm("addss  %[tag_ptr],%%xmm15\n"                             \
         :                             \
         : [addr_val] "r"(a)           \
         :)
+
+#elif WASM_RT_MEMCHECK_MASK_PDEP
+#define MEMCHECK(mem, a, t)           \
+    a = a | _pdep_u64(a, mem->pdep_mask)
 
 #elif WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM
 

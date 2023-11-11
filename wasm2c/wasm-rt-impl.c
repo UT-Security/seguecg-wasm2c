@@ -446,6 +446,10 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   memory->max_pages = max_pages;
   memory->is64 = is64;
 
+#if WASM_RT_MEMCHECK_MASK_PDEP
+  memory->pdep_mask = (uint64_t) -1;
+#endif
+
 #if WASM_RT_USE_MMAP
 
 #if WASM_RT_MEMCHECK_PRESHADOW_BYTES
