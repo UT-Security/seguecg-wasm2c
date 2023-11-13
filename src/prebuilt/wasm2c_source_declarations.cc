@@ -109,17 +109,13 @@ R"w2c_template(
 )w2c_template"
 R"w2c_template(#define RANGE_CHECK_TRAP(mem, offset, len)          \
 )w2c_template"
-R"w2c_template(  if (UNLIKELY(offset + (uint64_t)len > mem->size)) \
-)w2c_template"
-R"w2c_template(    offset = mem->size;
+R"w2c_template(  offset = (UNLIKELY(offset + (uint64_t)len > mem->size)) ? mem->size : offset;
 )w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_BOUNDS_CHECK_TRAP_SCHEME == 2
 )w2c_template"
 R"w2c_template(#define RANGE_CHECK_TRAP(mem, offset, len)          \
 )w2c_template"
-R"w2c_template(  if (UNLIKELY(offset + (uint64_t)len > mem->size)) \
-)w2c_template"
-R"w2c_template(    offset = -1;
+R"w2c_template(  offset = (UNLIKELY(offset + (uint64_t)len > mem->size)) ? -1 : offset;
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
