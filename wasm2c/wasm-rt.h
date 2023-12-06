@@ -196,8 +196,8 @@ extern "C" {
 #if WASM_RT_MEMCHECK_SHADOW_PAGE
 #if !defined(WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME) || \
     WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME < 1 ||       \
-    WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME > 4
-#error "Expected value for WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME between 1 and 4"
+    WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME > 5
+#error "Expected value for WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME between 1 and 5"
 #endif
 #endif
 

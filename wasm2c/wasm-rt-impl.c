@@ -299,7 +299,7 @@ static uint64_t get_allocation_size_for_mmap(wasm_rt_memory_t* memory) {
 
 #endif
 
-#if WASM_RT_MEMCHECK_SHADOW_BYTES || WASM_RT_MEMCHECK_PRESHADOW_BYTES || WASM_RT_MEMCHECK_SHADOW_BYTES_TAG
+#if WASM_RT_MEMCHECK_SHADOW_BYTES || WASM_RT_MEMCHECK_PRESHADOW_BYTES || WASM_RT_MEMCHECK_SHADOW_BYTES_TAG || WASM_RT_MEMCHECK_SHADOW_PAGE
 
 static uint64_t div_and_roundup(size_t numerator, size_t denominator) {
   if (numerator == 0) {
@@ -309,7 +309,9 @@ static uint64_t div_and_roundup(size_t numerator, size_t denominator) {
   uint64_t pages = ((numerator - 1) / denominator) + 1;
   return pages;
 }
+#endif
 
+#if WASM_RT_MEMCHECK_SHADOW_BYTES || WASM_RT_MEMCHECK_PRESHADOW_BYTES || WASM_RT_MEMCHECK_SHADOW_BYTES_TAG
 static size_t get_required_shadow_bytes(size_t pages) {
 #if WASM_RT_MEMCHECK_PRESHADOW_BYTES ||          \
     WASM_RT_MEMCHECK_SHADOW_BYTES_TAG ||        \
@@ -512,7 +514,12 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
     abort();
   }
 
+#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME != 5
   uint64_t shadow_byte_length = initial_pages * OSPAGE_SIZE;
+#else
+  uint64_t shadow_byte_length = div_and_roundup(initial_pages, 1 << 24)  * OSPAGE_SIZE;
+#endif
+
 #if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 3 || \
     WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
   int shadow_ret = os_mprotect(shadow_memory, shadow_byte_length);
@@ -634,17 +641,30 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
 #endif
 
 #if WASM_RT_MEMCHECK_SHADOW_PAGE
+
+#if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME != 5
   uint64_t shadow_old_size = old_pages * OSPAGE_SIZE;
   uint64_t shadow_new_size = new_pages * OSPAGE_SIZE;
   uint64_t shadow_delta_size = delta * OSPAGE_SIZE;
+#else
+  uint64_t shadow_old_size = div_and_roundup(old_pages, 1 << 24)  * OSPAGE_SIZE;
+  uint64_t shadow_new_size = div_and_roundup(new_pages, 1 << 24)  * OSPAGE_SIZE;
+  uint64_t shadow_delta_size = div_and_roundup(delta, 1 << 24)  * OSPAGE_SIZE;
+#endif
+
+  int shadow_ret = 1;
+
+  if (shadow_delta_size != 0) {
 #if WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 3 || \
     WASM_RT_MEMCHECK_SHADOW_PAGE_SCHEME == 4
-  int shadow_ret =
-      os_mprotect(memory->shadow_memory + shadow_old_size, shadow_delta_size);
+    shadow_ret =
+        os_mprotect(memory->shadow_memory + shadow_old_size, shadow_delta_size);
 #else
-  int shadow_ret = os_mprotect_read(memory->shadow_memory + shadow_old_size,
+    shadow_ret = os_mprotect_read(memory->shadow_memory + shadow_old_size,
                                     shadow_delta_size);
 #endif
+  }
+
   if (shadow_ret != 0) {
     return (uint64_t)-1;
   }
