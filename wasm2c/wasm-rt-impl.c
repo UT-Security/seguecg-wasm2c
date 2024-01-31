@@ -464,8 +464,11 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   const uint64_t disallowed_and_allowed_pages = nearest_page_count * 2;
   const uint64_t pre_shadow_bytes = disallowed_and_allowed_pages * OSPAGE_SIZE;
 #elif WASM_RT_MEMCHECK_PRESHADOW_PAGE
-  // 1 page per 1tb (2^40) of wasm memory. Max wasm memory 2^64 => Pages = 2^24
-  const uint64_t page_count = 1 << 24;
+  // 1 OS page per 1tb (2^40) of wasm memory.
+  // 1 OS page per 2^40 / WASM_PAGE_SIZE
+  //             = 2^40 / 2^16
+  //             = 1 OS page per 2 ^ 24 Wasm pages
+  const uint64_t page_count = div_and_roundup(max_pages, (1 << 24));
   const uint64_t pre_shadow_bytes = page_count * OSPAGE_SIZE;
 #else
   const uint64_t pre_shadow_bytes = 0;
