@@ -556,7 +556,7 @@ R"w2c_template(
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t)           \
 )w2c_template"
-R"w2c_template(    a = a | _pdep_u64(a, mem->pdep_mask)
+R"w2c_template(    a = a | _pdep_u64(a, (uint64_t)0xf00000000fffffff)
 )w2c_template"
 R"w2c_template(
 #elif WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM

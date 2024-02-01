@@ -294,7 +294,7 @@ asm("addss  %[tag_ptr],%%xmm15\n"                             \
 
 #elif WASM_RT_MEMCHECK_MASK_PDEP
 #define MEMCHECK(mem, a, t)           \
-    a = a | _pdep_u64(a, mem->pdep_mask)
+    a = a | _pdep_u64(a, (uint64_t)0xf00000000fffffff)
 
 #elif WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM
 
