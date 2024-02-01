@@ -26,7 +26,7 @@ R"w2c_template(
 #define UNREACHABLE TRAP(UNREACHABLE)
 )w2c_template"
 R"w2c_template(
-#if WASM_RT_MEMCHECK_MASK_PDEP
+#if WASM_RT_MEMCHECK_MASK_PDEP || WASM_RT_MEMCHECK_MASK_PEXT
 )w2c_template"
 R"w2c_template(#include <immintrin.h>
 )w2c_template"
@@ -554,9 +554,22 @@ R"w2c_template(        :)
 R"w2c_template(
 #elif WASM_RT_MEMCHECK_MASK_PDEP
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t)           \
+R"w2c_template(
+#define MEMCHECK(mem, a, t) a = a | _pdep_u64(a, (uint64_t)0xf00000000fffffff)
 )w2c_template"
-R"w2c_template(    a = a | _pdep_u64(a, (uint64_t)0xf00000000fffffff)
+R"w2c_template(
+#elif WASM_RT_MEMCHECK_MASK_PEXT
+)w2c_template"
+R"w2c_template(
+#if WASM_RT_USE_SHADOW_SEGUE
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(-_pext_u64(a, (uint64_t)0xfffffffff0000000)));
+)w2c_template"
+R"w2c_template(#else
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->data[-_pext_u64(a, (uint64_t)0xfffffffff0000000)]);
+)w2c_template"
+R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(
 #elif WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM

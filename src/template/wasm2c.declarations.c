@@ -15,7 +15,7 @@
 
 #define UNREACHABLE TRAP(UNREACHABLE)
 
-#if WASM_RT_MEMCHECK_MASK_PDEP
+#if WASM_RT_MEMCHECK_MASK_PDEP || WASM_RT_MEMCHECK_MASK_PEXT
 #include <immintrin.h>
 #endif
 
@@ -293,8 +293,16 @@ asm("addss  %[tag_ptr],%%xmm15\n"                             \
         :)
 
 #elif WASM_RT_MEMCHECK_MASK_PDEP
-#define MEMCHECK(mem, a, t)           \
-    a = a | _pdep_u64(a, (uint64_t)0xf00000000fffffff)
+
+#define MEMCHECK(mem, a, t) a = a | _pdep_u64(a, (uint64_t)0xf00000000fffffff)
+
+#elif WASM_RT_MEMCHECK_MASK_PEXT
+
+#if WASM_RT_USE_SHADOW_SEGUE
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(-_pext_u64(a, (uint64_t)0xfffffffff0000000)));
+#else
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->data[-_pext_u64(a, (uint64_t)0xfffffffff0000000)]);
+#endif
 
 #elif WASM_RT_MEMCHECK_BOUNDS_CHECK_ASM
 
