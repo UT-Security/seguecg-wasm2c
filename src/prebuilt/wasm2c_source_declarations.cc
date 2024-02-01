@@ -620,7 +620,7 @@ R"w2c_template(
 R"w2c_template(
 #define MEMCPY_GS(TYPE)                                                  \
 )w2c_template"
-R"w2c_template(  static MAYBEINLINE void memcpyfromgs_##TYPE(TYPE* target, u32 index) { \
+R"w2c_template(  static MAYBEINLINE void memcpyfromgs_##TYPE(TYPE* target, u64 index) { \
 )w2c_template"
 R"w2c_template(    TYPE __seg_gs* source = (TYPE __seg_gs*)(uintptr_t)index;            \
 )w2c_template"
@@ -628,7 +628,7 @@ R"w2c_template(    *target = *source;                                           
 )w2c_template"
 R"w2c_template(  }                                                                      \
 )w2c_template"
-R"w2c_template(  static MAYBEINLINE void memcpytogs_##TYPE(u32 index, TYPE* source) {   \
+R"w2c_template(  static MAYBEINLINE void memcpytogs_##TYPE(u64 index, TYPE* source) {   \
 )w2c_template"
 R"w2c_template(    TYPE __seg_gs* target = (TYPE __seg_gs*)(uintptr_t)index;            \
 )w2c_template"

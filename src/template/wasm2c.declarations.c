@@ -331,11 +331,11 @@ asm("addss  %[tag_ptr],%%xmm15\n"                             \
 #if WASM_RT_USE_SEGUE
 
 #define MEMCPY_GS(TYPE)                                                  \
-  static MAYBEINLINE void memcpyfromgs_##TYPE(TYPE* target, u32 index) { \
+  static MAYBEINLINE void memcpyfromgs_##TYPE(TYPE* target, u64 index) { \
     TYPE __seg_gs* source = (TYPE __seg_gs*)(uintptr_t)index;            \
     *target = *source;                                                   \
   }                                                                      \
-  static MAYBEINLINE void memcpytogs_##TYPE(u32 index, TYPE* source) {   \
+  static MAYBEINLINE void memcpytogs_##TYPE(u64 index, TYPE* source) {   \
     TYPE __seg_gs* target = (TYPE __seg_gs*)(uintptr_t)index;            \
     *target = *source;                                                   \
   }
