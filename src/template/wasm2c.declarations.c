@@ -161,9 +161,9 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 #elif WASM_RT_MEMCHECK_PRESHADOW_PAGE
 
 #if WASM_RT_USE_SHADOW_SEGUE
-#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, -(a >> 40) - 1))
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, -(a >> 16) - 1))
 #else
-#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->data[-(a >> 40) - 1])
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->data[-(a >> 16) - 1])
 #endif
 
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_TAG

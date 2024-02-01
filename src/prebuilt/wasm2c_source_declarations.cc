@@ -304,11 +304,11 @@ R"w2c_template(
 R"w2c_template(
 #if WASM_RT_USE_SHADOW_SEGUE
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, -(a >> 40) - 1))
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(WASM_RT_GS_REF(u8, -(a >> 16) - 1))
 )w2c_template"
 R"w2c_template(#else
 )w2c_template"
-R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->data[-(a >> 40) - 1])
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(mem->data[-(a >> 16) - 1])
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
