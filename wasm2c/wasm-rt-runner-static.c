@@ -26,6 +26,7 @@
 
 int main(int argc, char const* argv[]) {
 
+  wasm_rt_init();
   uvwasi_t uvwasi;
   MODULE_TYPE mod;
 
