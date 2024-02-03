@@ -438,6 +438,13 @@ static void set_manual_mpx_bound(uint64_t bound) {
 
 #endif
 
+
+#if WASM_RT_USE_SEGUE || WASM_RT_USE_SHADOW_SEGUE
+void wasm_rt_set_segment_base(uintptr_t base) {
+  _writegsbase_u64((uintptr_t)base);
+}
+#endif
+
 void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
                              uint64_t initial_pages,
                              uint64_t max_pages,
