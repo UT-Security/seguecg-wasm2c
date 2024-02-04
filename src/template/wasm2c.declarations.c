@@ -292,6 +292,15 @@ asm("addss  %[tag_ptr],%%xmm15\n"                             \
         : [addr_val] "r"(a)           \
         :)
 
+#elif WASM_RT_MEMCHECK_DUMMY
+
+#define MEMCHECK(mem, a, t)           \
+    asm volatile(                     \
+        "add $0x0, %[addr_val]\n"     \
+        :                             \
+        : [addr_val] "r"(a)           \
+        :)
+
 #elif WASM_RT_MEMCHECK_MASK_PDEP
 
 #define MEMCHECK(mem, a, t) a = a | _pdep_u64(a, (uint64_t)0xf00000000fffffff)
