@@ -26,7 +26,7 @@ R"w2c_template(
 #define UNREACHABLE TRAP(UNREACHABLE)
 )w2c_template"
 R"w2c_template(
-#if WASM_RT_MEMCHECK_MASK_PDEP || WASM_RT_MEMCHECK_MASK_PEXT
+#if WASM_RT_MEMCHECK_MASK_PDEP || WASM_RT_MEMCHECK_MASK_PDEP48 || WASM_RT_MEMCHECK_MASK_PEXT
 )w2c_template"
 R"w2c_template(#include <immintrin.h>
 )w2c_template"
@@ -610,6 +610,12 @@ R"w2c_template(
 )w2c_template"
 R"w2c_template(
 #define MEMCHECK(mem, a, t) a = a | _pdep_u64(a, (uint64_t)0xf00000000fffffff)
+)w2c_template"
+R"w2c_template(
+#elif WASM_RT_MEMCHECK_MASK_PDEP48
+)w2c_template"
+R"w2c_template(
+#define MEMCHECK(mem, a, t) a = _pdep_u64(a, (uint64_t)0xf00000000fffffff)
 )w2c_template"
 R"w2c_template(
 #elif WASM_RT_MEMCHECK_MASK_PEXT
