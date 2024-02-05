@@ -586,6 +586,26 @@ R"w2c_template(        : [addr_val] "r"(a)           \
 R"w2c_template(        :)
 )w2c_template"
 R"w2c_template(
+#elif WASM_RT_MEMCHECK_DUMMY3
+)w2c_template"
+R"w2c_template(
+#define MEMCHECK(mem, a, t)           \
+)w2c_template"
+R"w2c_template(    asm volatile(                     \
+)w2c_template"
+R"w2c_template(        "add $0x0, %[addr_val]\n"     \
+)w2c_template"
+R"w2c_template(        "add $0x0, %[addr_val]\n"     \
+)w2c_template"
+R"w2c_template(        "add $0x0, %[addr_val]\n"     \
+)w2c_template"
+R"w2c_template(        :                             \
+)w2c_template"
+R"w2c_template(        : [addr_val] "r"(a)           \
+)w2c_template"
+R"w2c_template(        :)
+)w2c_template"
+R"w2c_template(
 #elif WASM_RT_MEMCHECK_MASK_PDEP
 )w2c_template"
 R"w2c_template(
