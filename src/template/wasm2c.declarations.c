@@ -370,7 +370,7 @@ asm("addss  %[tag_ptr],%%xmm15\n"                             \
 #define MAYBEINLINE inline
 #endif
 
-#if WASM_RT_USE_SEGUE
+#if WASM_RT_USE_SEGUE || WASM_RT_USE_SEGUE_LOAD || WASM_RT_USE_SEGUE_STORE
 
 #define MEMCPY_GS(TYPE)                                                  \
   static MAYBEINLINE void memcpyfromgs_##TYPE(TYPE* target, u64 index) { \
@@ -455,6 +455,12 @@ static MAYBEINLINE void load_data(void* dest, const void* src, size_t n) {
 
 #if WASM_RT_USE_SEGUE
 #define DEFINE_LOAD DEFINE_LOAD_GS
+#define DEFINE_STORE DEFINE_STORE_GS
+#elif WASM_RT_USE_SEGUE_LOAD
+#define DEFINE_LOAD DEFINE_LOAD_GS
+#define DEFINE_STORE DEFINE_STORE_REGULAR
+#elif WASM_RT_USE_SEGUE_STORE
+#define DEFINE_LOAD DEFINE_LOAD_REGULAR
 #define DEFINE_STORE DEFINE_STORE_GS
 #else
 #define DEFINE_LOAD DEFINE_LOAD_REGULAR

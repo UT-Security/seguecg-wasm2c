@@ -82,6 +82,18 @@ extern "C" {
 #define WASM_RT_USE_SEGUE 0
 #endif
 
+#ifndef WASM_RT_USE_SEGUE_LOAD
+#define WASM_RT_USE_SEGUE_LOAD 0
+#endif
+
+#ifndef WASM_RT_USE_SEGUE_STORE
+#define WASM_RT_USE_SEGUE_STORE 0
+#endif
+
+#if (WASM_RT_USE_SEGUE + WASM_RT_USE_SEGUE_LOAD + WASM_RT_USE_SEGUE_STORE) > 1
+#error "Cannot define multiple in WASM_RT_USE_SEGUE, WASM_RT_USE_SEGUE_LOAD, WASM_RT_USE_SEGUE_STORE"
+#endif
+
 /**
  * Specify if we use OR mmap/mprotect (+ Windows equivalents) OR malloc/realloc
  * for the Wasm memory allocation and growth. mmap/mprotect guarantees memory

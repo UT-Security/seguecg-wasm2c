@@ -688,7 +688,7 @@ R"w2c_template(#define MAYBEINLINE inline
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(
-#if WASM_RT_USE_SEGUE
+#if WASM_RT_USE_SEGUE || WASM_RT_USE_SEGUE_LOAD || WASM_RT_USE_SEGUE_STORE
 )w2c_template"
 R"w2c_template(
 #define MEMCPY_GS(TYPE)                                                  \
@@ -847,6 +847,18 @@ R"w2c_template(
 #if WASM_RT_USE_SEGUE
 )w2c_template"
 R"w2c_template(#define DEFINE_LOAD DEFINE_LOAD_GS
+)w2c_template"
+R"w2c_template(#define DEFINE_STORE DEFINE_STORE_GS
+)w2c_template"
+R"w2c_template(#elif WASM_RT_USE_SEGUE_LOAD
+)w2c_template"
+R"w2c_template(#define DEFINE_LOAD DEFINE_LOAD_GS
+)w2c_template"
+R"w2c_template(#define DEFINE_STORE DEFINE_STORE_REGULAR
+)w2c_template"
+R"w2c_template(#elif WASM_RT_USE_SEGUE_STORE
+)w2c_template"
+R"w2c_template(#define DEFINE_LOAD DEFINE_LOAD_REGULAR
 )w2c_template"
 R"w2c_template(#define DEFINE_STORE DEFINE_STORE_GS
 )w2c_template"

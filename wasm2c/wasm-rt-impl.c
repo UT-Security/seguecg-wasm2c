@@ -36,7 +36,7 @@
 #include <sys/mman.h>
 #endif
 
-#if WASM_RT_USE_SEGUE || WASM_RT_USE_SHADOW_SEGUE
+#if WASM_RT_USE_SEGUE || WASM_RT_USE_SHADOW_SEGUE || WASM_RT_USE_SEGUE_LOAD || WASM_RT_USE_SEGUE_STORE
 #include <immintrin.h>
 #endif
 
@@ -439,7 +439,7 @@ static void set_manual_mpx_bound(uint64_t bound) {
 #endif
 
 
-#if WASM_RT_USE_SEGUE || WASM_RT_USE_SHADOW_SEGUE
+#if WASM_RT_USE_SEGUE || WASM_RT_USE_SHADOW_SEGUE || WASM_RT_USE_SEGUE_LOAD || WASM_RT_USE_SEGUE_STORE
 void wasm_rt_set_segment_base(uintptr_t base) {
   _writegsbase_u64((uintptr_t)base);
 }
@@ -519,7 +519,7 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   memory->data = calloc(byte_length, 1);
 #endif
 
-#if WASM_RT_USE_SEGUE || \
+#if WASM_RT_USE_SEGUE || WASM_RT_USE_SEGUE_LOAD || WASM_RT_USE_SEGUE_STORE || \
     (WASM_RT_MEMCHECK_PRESHADOW_BYTES && WASM_RT_USE_SHADOW_SEGUE) || \
     (WASM_RT_MEMCHECK_PRESHADOW_PAGE && WASM_RT_USE_SHADOW_SEGUE)
   _writegsbase_u64((uintptr_t)memory->data);
