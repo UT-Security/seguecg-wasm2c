@@ -40,6 +40,14 @@
 #include <immintrin.h>
 #endif
 
+#if WASM_RT_USE_MTE
+#include <unistd.h>
+#include <sys/auxv.h>
+#include <sys/mman.h>
+#include <sys/prctl.h>
+#define PROT_MTE_LOCALDEF                 0x20
+#endif
+
 #define PAGE_SIZE 65536
 #define OSPAGE_SIZE 4096
 
@@ -161,6 +169,9 @@ static void os_cleanup_signal_handler(void) {
 #else
 static void* os_mmap(size_t size) {
   int map_prot = PROT_NONE;
+#if WASM_RT_USE_MTE
+    map_prot = map_prot | PROT_MTE_LOCALDEF;
+#endif
   int map_flags = MAP_ANONYMOUS | MAP_PRIVATE;
   uint8_t* addr = mmap(NULL, size, map_prot, map_flags, -1, 0);
   if (addr == MAP_FAILED)
@@ -169,6 +180,9 @@ static void* os_mmap(size_t size) {
 }
 static void* os_mmap_read(size_t size) {
   int map_prot = PROT_READ;
+#if WASM_RT_USE_MTE
+    map_prot = map_prot | PROT_MTE_LOCALDEF;
+#endif
   int map_flags = MAP_ANONYMOUS | MAP_PRIVATE;
   uint8_t* addr = mmap(NULL, size, map_prot, map_flags, -1, 0);
   if (addr == MAP_FAILED)
@@ -181,11 +195,19 @@ static int os_munmap(void* addr, size_t size) {
 }
 
 static int os_mprotect(void* addr, size_t size) {
-  return mprotect(addr, size, PROT_READ | PROT_WRITE);
+  int map_prot = PROT_READ | PROT_WRITE;
+#if WASM_RT_USE_MTE
+    map_prot = map_prot | PROT_MTE_LOCALDEF;
+#endif
+  return mprotect(addr, size, map_prot);
 }
 
 static int os_mprotect_read(void* addr, size_t size) {
-  return mprotect(addr, size, PROT_READ);
+  int map_prot = PROT_READ;
+#if WASM_RT_USE_MTE
+    map_prot = map_prot | PROT_MTE_LOCALDEF;
+#endif
+  return mprotect(addr, size, map_prot);
 }
 
 static void os_print_last_error(const char* msg) {
@@ -257,6 +279,16 @@ void wasm_rt_init(void) {
   if (!g_signal_handler_installed) {
     g_signal_handler_installed = true;
     os_install_signal_handler();
+  }
+#endif
+
+#if WASM_RT_USE_MTE
+  if (prctl(PR_SET_TAGGED_ADDR_CTRL,
+            PR_TAGGED_ADDR_ENABLE | PR_MTE_TCF_SYNC | (0xfffe << PR_MTE_TAG_SHIFT),
+            0, 0, 0))
+  {
+    perror("prctl() failed");
+    abort();
   }
 #endif
 }
@@ -445,6 +477,31 @@ void wasm_rt_set_segment_base(uintptr_t base) {
 }
 #endif
 
+#ifdef WASM_RT_USE_MTE
+/*
+ * Insert a random logical tag into the given pointer.
+ * IRG instruction.
+ */
+static uint64_t insert_mte_tag(void* ptr) {
+  uint64_t __val;
+  asm("irg %0, %1" : "=r" (__val) : "r" (ptr));
+  return __val;
+}
+
+static void set_mte_tag(unsigned char* tagged_addr) {
+  asm volatile("stg %0, [%0]" : : "r" (tagged_addr) : "memory");
+}
+
+static void set_mte_tag_range(unsigned char* tagged_addr, int64_t size) {
+  while(size > 0) {
+    set_mte_tag(tagged_addr);
+    tagged_addr += 16;
+    size -= 16;
+  };
+}
+
+#endif
+
 void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
                              uint64_t initial_pages,
                              uint64_t max_pages,
@@ -483,6 +540,11 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
     os_print_last_error("os_mmap failed.");
     abort();
   }
+
+#ifdef WASM_RT_USE_MTE
+  addr = insert_mte_tag((unsigned char *)addr);
+#endif
+
 #if WASM_RT_MEMCHECK_PRESHADOW_BYTES
   memory->shadow_bytes_allocation = addr;
   memory->shadow_bytes_allocation_size = pre_shadow_bytes;
@@ -507,6 +569,10 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
     abort();
   }
   memory->data = addr;
+
+#ifdef WASM_RT_USE_MTE
+  set_mte_tag_range(addr, byte_length);
+#endif
 
 #if WASM_RT_MEMCHECK_PRESHADOW_BYTES
   memory->shadow_bytes = get_shadow_bytes_pointer(
@@ -649,6 +715,10 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
   if (ret != 0) {
     return (uint64_t)-1;
   }
+#ifdef WASM_RT_USE_MTE
+  set_mte_tag_range(new_data + old_size, delta_size);
+#endif
+
 #else
   uint8_t* new_data = realloc(memory->data, new_size);
   if (new_data == NULL) {
