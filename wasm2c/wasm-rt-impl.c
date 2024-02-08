@@ -477,7 +477,7 @@ void wasm_rt_set_segment_base(uintptr_t base) {
 }
 #endif
 
-#ifdef WASM_RT_USE_MTE
+#if WASM_RT_USE_MTE
 /*
  * Insert a random logical tag into the given pointer.
  * IRG instruction.
@@ -541,7 +541,7 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
     abort();
   }
 
-#ifdef WASM_RT_USE_MTE
+#if WASM_RT_USE_MTE
   addr = insert_mte_tag((unsigned char *)addr);
 #endif
 
@@ -570,7 +570,7 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   }
   memory->data = addr;
 
-#ifdef WASM_RT_USE_MTE
+#if WASM_RT_USE_MTE
   set_mte_tag_range(addr, byte_length);
 #endif
 
@@ -715,7 +715,7 @@ static uint64_t grow_memory_impl(wasm_rt_memory_t* memory, uint64_t delta) {
   if (ret != 0) {
     return (uint64_t)-1;
   }
-#ifdef WASM_RT_USE_MTE
+#if WASM_RT_USE_MTE
   set_mte_tag_range(new_data + old_size, delta_size);
 #endif
 
