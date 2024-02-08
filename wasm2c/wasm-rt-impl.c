@@ -488,15 +488,20 @@ static uint64_t insert_mte_tag(void* ptr) {
   return __val;
 }
 
-static void set_mte_tag(unsigned char* tagged_addr) {
-  asm volatile("stg %0, [%0]" : : "r" (tagged_addr) : "memory");
+static void set_mte_tag_double(unsigned char* tagged_addr) {
+  asm volatile("st2g %0, [%0]" : : "r" (tagged_addr) : "memory");
 }
 
 static void set_mte_tag_range(unsigned char* tagged_addr, int64_t size) {
+  if (size % 32 ! = 0) {
+    printf("MTE size not divisible by 32\n");
+    abort();
+  }
+
   while(size > 0) {
-    set_mte_tag(tagged_addr);
-    tagged_addr += 16;
-    size -= 16;
+    set_mte_tag_double(tagged_addr);
+    tagged_addr += 32;
+    size -= 32;
   };
 }
 
