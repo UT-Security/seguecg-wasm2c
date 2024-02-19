@@ -688,52 +688,6 @@ R"w2c_template(#define MAYBEINLINE inline
 R"w2c_template(#endif
 )w2c_template"
 R"w2c_template(
-#if WASM_RT_USE_SEGUE || WASM_RT_USE_SEGUE_LOAD || WASM_RT_USE_SEGUE_STORE
-)w2c_template"
-R"w2c_template(
-#define MEMCPY_GS(TYPE)                                                  \
-)w2c_template"
-R"w2c_template(  static MAYBEINLINE void memcpyfromgs_##TYPE(TYPE* target, u64 index) { \
-)w2c_template"
-R"w2c_template(    TYPE __seg_gs* source = (TYPE __seg_gs*)(uintptr_t)index;            \
-)w2c_template"
-R"w2c_template(    *target = *source;                                                   \
-)w2c_template"
-R"w2c_template(  }                                                                      \
-)w2c_template"
-R"w2c_template(  static MAYBEINLINE void memcpytogs_##TYPE(u64 index, TYPE* source) {   \
-)w2c_template"
-R"w2c_template(    TYPE __seg_gs* target = (TYPE __seg_gs*)(uintptr_t)index;            \
-)w2c_template"
-R"w2c_template(    *target = *source;                                                   \
-)w2c_template"
-R"w2c_template(  }
-)w2c_template"
-R"w2c_template(
-MEMCPY_GS(u8);
-)w2c_template"
-R"w2c_template(MEMCPY_GS(s8);
-)w2c_template"
-R"w2c_template(MEMCPY_GS(u16);
-)w2c_template"
-R"w2c_template(MEMCPY_GS(s16);
-)w2c_template"
-R"w2c_template(MEMCPY_GS(u32);
-)w2c_template"
-R"w2c_template(MEMCPY_GS(s32);
-)w2c_template"
-R"w2c_template(MEMCPY_GS(u64);
-)w2c_template"
-R"w2c_template(MEMCPY_GS(s64);
-)w2c_template"
-R"w2c_template(MEMCPY_GS(f32);
-)w2c_template"
-R"w2c_template(MEMCPY_GS(f64);
-)w2c_template"
-R"w2c_template(
-#endif
-)w2c_template"
-R"w2c_template(
 static void init_memchk() {
 )w2c_template"
 R"w2c_template(#if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG
@@ -811,32 +765,32 @@ R"w2c_template(    wasm_rt_memcpy(&mem->data[addr], &wrapped, sizeof(t1));      
 R"w2c_template(  }
 )w2c_template"
 R"w2c_template(
-#define DEFINE_LOAD_GS(name, t1, t2, t3, force_read)            \
+#define DEFINE_LOAD_GS(name, t1, t2, t3, force_read)                           \
 )w2c_template"
-R"w2c_template(  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) { \
+R"w2c_template(  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) {                \
 )w2c_template"
-R"w2c_template(    MEMCHECK(mem, addr, t1);                                    \
+R"w2c_template(    MEMCHECK(mem, addr, t1);                                                   \
 )w2c_template"
-R"w2c_template(    t1 result;                                                  \
+R"w2c_template(    t1 result;                                                                 \
 )w2c_template"
-R"w2c_template(    memcpyfromgs_##t1(&result, addr);                           \
+R"w2c_template(    wasm_rt_memcpy(&result, ((uint8_t __seg_gs*)(uintptr_t)addr), sizeof(t1)); \
 )w2c_template"
-R"w2c_template(    force_read(result);                                         \
+R"w2c_template(    force_read(result);                                                        \
 )w2c_template"
-R"w2c_template(    return (t3)(t2)result;                                      \
+R"w2c_template(    return (t3)(t2)result;                                                     \
 )w2c_template"
 R"w2c_template(  }
 )w2c_template"
 R"w2c_template(
-#define DEFINE_STORE_GS(name, t1, t2)                                       \
+#define DEFINE_STORE_GS(name, t1, t2)                                           \
 )w2c_template"
-R"w2c_template(  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) { \
+R"w2c_template(  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) {     \
 )w2c_template"
-R"w2c_template(    MEMCHECK(mem, addr, t1);                                                \
+R"w2c_template(    MEMCHECK(mem, addr, t1);                                                    \
 )w2c_template"
-R"w2c_template(    t1 wrapped = (t1)value;                                                 \
+R"w2c_template(    t1 wrapped = (t1)value;                                                     \
 )w2c_template"
-R"w2c_template(    memcpytogs_##t1(addr, &wrapped);                                        \
+R"w2c_template(    wasm_rt_memcpy(((uint8_t __seg_gs*)(uintptr_t)addr), &wrapped, sizeof(t1)); \
 )w2c_template"
 R"w2c_template(  }
 )w2c_template"

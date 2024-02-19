@@ -370,31 +370,6 @@ asm("addss  %[tag_ptr],%%xmm15\n"                             \
 #define MAYBEINLINE inline
 #endif
 
-#if WASM_RT_USE_SEGUE || WASM_RT_USE_SEGUE_LOAD || WASM_RT_USE_SEGUE_STORE
-
-#define MEMCPY_GS(TYPE)                                                  \
-  static MAYBEINLINE void memcpyfromgs_##TYPE(TYPE* target, u64 index) { \
-    TYPE __seg_gs* source = (TYPE __seg_gs*)(uintptr_t)index;            \
-    *target = *source;                                                   \
-  }                                                                      \
-  static MAYBEINLINE void memcpytogs_##TYPE(u64 index, TYPE* source) {   \
-    TYPE __seg_gs* target = (TYPE __seg_gs*)(uintptr_t)index;            \
-    *target = *source;                                                   \
-  }
-
-MEMCPY_GS(u8);
-MEMCPY_GS(s8);
-MEMCPY_GS(u16);
-MEMCPY_GS(s16);
-MEMCPY_GS(u32);
-MEMCPY_GS(s32);
-MEMCPY_GS(u64);
-MEMCPY_GS(s64);
-MEMCPY_GS(f32);
-MEMCPY_GS(f64);
-
-#endif
-
 static void init_memchk() {
 #if WASM_RT_MEMCHECK_SHADOW_BYTES_TAG
   if (!floatzone_y_init_done) {
@@ -435,20 +410,20 @@ static MAYBEINLINE void load_data(void* dest, const void* src, size_t n) {
     wasm_rt_memcpy(&mem->data[addr], &wrapped, sizeof(t1));                 \
   }
 
-#define DEFINE_LOAD_GS(name, t1, t2, t3, force_read)            \
-  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) { \
-    MEMCHECK(mem, addr, t1);                                    \
-    t1 result;                                                  \
-    memcpyfromgs_##t1(&result, addr);                           \
-    force_read(result);                                         \
-    return (t3)(t2)result;                                      \
+#define DEFINE_LOAD_GS(name, t1, t2, t3, force_read)                           \
+  static MAYBEINLINE t3 name(wasm_rt_memory_t* mem, u64 addr) {                \
+    MEMCHECK(mem, addr, t1);                                                   \
+    t1 result;                                                                 \
+    wasm_rt_memcpy(&result, ((uint8_t __seg_gs*)(uintptr_t)addr), sizeof(t1)); \
+    force_read(result);                                                        \
+    return (t3)(t2)result;                                                     \
   }
 
-#define DEFINE_STORE_GS(name, t1, t2)                                       \
-  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) { \
-    MEMCHECK(mem, addr, t1);                                                \
-    t1 wrapped = (t1)value;                                                 \
-    memcpytogs_##t1(addr, &wrapped);                                        \
+#define DEFINE_STORE_GS(name, t1, t2)                                           \
+  static MAYBEINLINE void name(wasm_rt_memory_t* mem, u64 addr, t2 value) {     \
+    MEMCHECK(mem, addr, t1);                                                    \
+    t1 wrapped = (t1)value;                                                     \
+    wasm_rt_memcpy(((uint8_t __seg_gs*)(uintptr_t)addr), &wrapped, sizeof(t1)); \
   }
 
 #endif
