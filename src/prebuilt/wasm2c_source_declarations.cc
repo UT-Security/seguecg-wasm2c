@@ -220,6 +220,34 @@ R"w2c_template(
 )w2c_template"
 R"w2c_template(#define MEMCHECK(mem, a, t)
 )w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SSWRITE_SIM
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t)  asm( \
+)w2c_template"
+R"w2c_template(    "mov %0, %0\n"                \
+)w2c_template"
+R"w2c_template(    "mov %0, %0\n"                \
+)w2c_template"
+R"w2c_template(    "mov %0, %0\n"                \
+)w2c_template"
+R"w2c_template(    "mov %0, %0\n"                \
+)w2c_template"
+R"w2c_template(    "mov %0, %0\n"                \
+)w2c_template"
+R"w2c_template(    "mov %0, %0\n"                \
+)w2c_template"
+R"w2c_template(    "mov %0, %0\n"                \
+)w2c_template"
+R"w2c_template(    "mov %0, %0\n"                \
+)w2c_template"
+R"w2c_template(    : "+r" (a)                    \
+)w2c_template"
+R"w2c_template(    :                             \
+)w2c_template"
+R"w2c_template(    :                             \
+)w2c_template"
+R"w2c_template(  );
+)w2c_template"
 R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_PAGE
 )w2c_template"
 R"w2c_template(

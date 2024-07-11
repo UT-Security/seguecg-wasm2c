@@ -117,6 +117,20 @@ static inline bool func_types_eq(const wasm_rt_func_type_t a,
 
 #if WASM_RT_MEMCHECK_GUARD_PAGES
 #define MEMCHECK(mem, a, t)
+#elif WASM_RT_MEMCHECK_SSWRITE_SIM
+#define MEMCHECK(mem, a, t)  asm( \
+    "mov %0, %0\n"                \
+    "mov %0, %0\n"                \
+    "mov %0, %0\n"                \
+    "mov %0, %0\n"                \
+    "mov %0, %0\n"                \
+    "mov %0, %0\n"                \
+    "mov %0, %0\n"                \
+    "mov %0, %0\n"                \
+    : "+r" (a)                    \
+    :                             \
+    :                             \
+  );
 #elif WASM_RT_MEMCHECK_SHADOW_PAGE
 
 // Access to the first 64k Wasm page should map to an access of the first 4k
