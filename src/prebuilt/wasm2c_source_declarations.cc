@@ -26,9 +26,9 @@ R"w2c_template(
 #define UNREACHABLE TRAP(UNREACHABLE)
 )w2c_template"
 R"w2c_template(
-#if WASM_RT_MEMCHECK_MASK_PDEP || WASM_RT_MEMCHECK_MASK_PDEP48 || WASM_RT_MEMCHECK_MASK_PEXT
+#if WASM_RT_MEMCHECK_MASK_PDEP || WASM_RT_MEMCHECK_MASK_PDEP48 || WASM_RT_MEMCHECK_MASK_PEXT || WASM_RT_MEMCHECK_SHADOW_BYTES_BITSCAN
 )w2c_template"
-R"w2c_template(#include <immintrin.h>
+R"w2c_template(#include <x86intrin.h>
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"
@@ -504,6 +504,26 @@ R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 8 && !WASM_RT_SPECT
 R"w2c_template(#define MEMCHECK(mem, a, t) mem->shadow_bytes[a >> 24] = 0
 )w2c_template"
 R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(#endif
+)w2c_template"
+R"w2c_template(
+
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_BITSCAN
+)w2c_template"
+R"w2c_template(
+// Allow 28 bits to be set.
+)w2c_template"
+R"w2c_template(// Read/write should occur at 0x100000 - 28 * 4 + __bsrq(a) * 4 = 0xfff90 + __bsrq(a) * 4
+)w2c_template"
+R"w2c_template(#if WASM_RT_MEMCHECK_SHADOW_BYTES_BITSCAN_SCHEME == 1
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) FORCE_READ_INT(*(uint32_t*) (uintptr_t) (0xfff90 + __bsrq(a) * 4))
+)w2c_template"
+R"w2c_template(#elif WASM_RT_MEMCHECK_SHADOW_BYTES_BITSCAN_SCHEME == 2
+)w2c_template"
+R"w2c_template(#define MEMCHECK(mem, a, t) *((uint32_t*) (uintptr_t) (0xfff90 + __bsrq(a) * 4)) = 0
 )w2c_template"
 R"w2c_template(#endif
 )w2c_template"

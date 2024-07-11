@@ -15,8 +15,8 @@
 
 #define UNREACHABLE TRAP(UNREACHABLE)
 
-#if WASM_RT_MEMCHECK_MASK_PDEP || WASM_RT_MEMCHECK_MASK_PDEP48 || WASM_RT_MEMCHECK_MASK_PEXT
-#include <immintrin.h>
+#if WASM_RT_MEMCHECK_MASK_PDEP || WASM_RT_MEMCHECK_MASK_PDEP48 || WASM_RT_MEMCHECK_MASK_PEXT || WASM_RT_MEMCHECK_SHADOW_BYTES_BITSCAN
+#include <x86intrin.h>
 #endif
 
 static inline bool func_types_eq(const wasm_rt_func_type_t a,
@@ -265,6 +265,17 @@ asm("addss  %[tag_ptr],%%xmm15\n"                             \
 #elif WASM_RT_MEMCHECK_SHADOW_BYTES_SCHEME == 8 && !WASM_RT_SPECTREMASK
 #define MEMCHECK(mem, a, t) mem->shadow_bytes[a >> 24] = 0
 #endif
+#endif
+
+
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_BITSCAN
+
+// Allow 28 bits to be set.
+// Read/write should occur at 0x100000 - 28 * 4 + __bsrq(a) * 4 = 0xfff90 + __bsrq(a) * 4
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_BITSCAN_SCHEME == 1
+#define MEMCHECK(mem, a, t) FORCE_READ_INT(*(uint32_t*) (uintptr_t) (0xfff90 + __bsrq(a) * 4))
+#elif WASM_RT_MEMCHECK_SHADOW_BYTES_BITSCAN_SCHEME == 2
+#define MEMCHECK(mem, a, t) *((uint32_t*) (uintptr_t) (0xfff90 + __bsrq(a) * 4)) = 0
 #endif
 
 #elif WASM_RT_MEMCHECK_PRESHADOW_BYTES

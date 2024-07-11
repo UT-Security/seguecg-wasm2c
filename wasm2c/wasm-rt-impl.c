@@ -37,7 +37,7 @@
 #endif
 
 #if WASM_RT_USE_SEGUE || WASM_RT_USE_SHADOW_SEGUE || WASM_RT_USE_SEGUE_LOAD || WASM_RT_USE_SEGUE_STORE
-#include <immintrin.h>
+#include <x86intrin.h>
 #endif
 
 #if WASM_RT_USE_MTE
@@ -167,15 +167,22 @@ static void os_cleanup_signal_handler(void) {
 #endif
 
 #else
-static void* os_mmap(size_t size) {
+static void* os_mmap_at(void* loc, size_t size) {
   int map_prot = PROT_NONE;
 #if WASM_RT_USE_MTE
     map_prot = map_prot | PROT_MTE_LOCALDEF;
 #endif
   int map_flags = MAP_ANONYMOUS | MAP_PRIVATE;
-  uint8_t* addr = mmap(NULL, size, map_prot, map_flags, -1, 0);
+  if (loc != NULL) {
+    map_flags |= MAP_FIXED;
+  }
+  uint8_t* addr = mmap(loc, size, map_prot, map_flags, -1, 0);
   if (addr == MAP_FAILED)
     return NULL;
+  if (loc != NULL && addr != NULL && addr != loc){
+    munmap(addr, size);
+    return NULL;
+  }
   return addr;
 }
 static void* os_mmap_read(size_t size) {
@@ -188,6 +195,10 @@ static void* os_mmap_read(size_t size) {
   if (addr == MAP_FAILED)
     return NULL;
   return addr;
+}
+
+static void* os_mmap(size_t size) {
+  return os_mmap_at(NULL, size);
 }
 
 static int os_munmap(void* addr, size_t size) {
@@ -699,6 +710,17 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
 #if WASM_RT_MEMCHECK_MPX
   enable_manual_mpx();
   set_manual_mpx_bound(memory->size);
+#endif
+
+#if WASM_RT_MEMCHECK_SHADOW_BYTES_BITSCAN
+  if (!os_mmap_at((void*)(uintptr_t)0xff000, 4096)){
+    os_print_last_error("os_mmap shadow bitscan failed.");
+    abort();
+  }
+  if (os_mprotect((void*)(uintptr_t)0xff000, 4096) != 0) {
+    os_print_last_error("os_mprotect shadow bitscan failed.");
+    abort();
+  }
 #endif
 }
 
