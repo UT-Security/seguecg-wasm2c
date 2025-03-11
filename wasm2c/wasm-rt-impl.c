@@ -504,7 +504,7 @@ static void set_mte_tag_double(unsigned char* tagged_addr) {
 }
 
 static void set_mte_tag_range(unsigned char* tagged_addr, int64_t size) {
-  if (size % 32 ! = 0) {
+  if (size % 32 != 0) {
     printf("MTE size not divisible by 32\n");
     abort();
   }
@@ -558,7 +558,7 @@ void wasm_rt_allocate_memory(wasm_rt_memory_t* memory,
   }
 
 #if WASM_RT_USE_MTE
-  addr = insert_mte_tag((unsigned char *)addr);
+  addr = (void*) insert_mte_tag((unsigned char *)addr);
 #endif
 
 #if WASM_RT_MEMCHECK_PRESHADOW_BYTES
